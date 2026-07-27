@@ -1,0 +1,17 @@
+name = "ottisk-cloud"
+main = "src/worker.mjs"
+compatibility_date = "2026-07-01"
+
+[vars]
+# Comma-separated exact browser origins. Avoid "*" in production.
+ALLOWED_ORIGINS = "https://example.com,http://localhost:8765"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ottisk-cloud"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Set secrets outside this file:
+#   npx wrangler secret put TOKEN_PEPPER
+#   npx wrangler secret put CRASH_PEPPER

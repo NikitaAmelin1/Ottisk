@@ -1,0 +1,28 @@
+{
+  "appId": "com.amelin.ottisk",
+  "appName": "ОТТИСК",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 700,
+      "backgroundColor": "#120d14",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#120d14"
+    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#120d14",
+    "scheme": "Ottisk"
+  }
+}

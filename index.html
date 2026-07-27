@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ОТТИСК" />
+  <meta name="theme-color" content="#081830" />
+  <meta name="description" content="ОТТИСК — удерживай палец: существо живёт только в касании." />
+  <meta name="ottisk-cloud-api" content="" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=77" />
+  <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
+  <title>ОТТИСК</title>
+</head>
+<body>
+  <div id="app" data-theme="0" data-skin="ink">
+    <main id="stage" class="stage">
+      <div class="aura" aria-hidden="true"></div>
+      <canvas id="game" aria-label="Игровое поле ОТТИСК"></canvas>
+      <div id="float-layer" class="float-layer">
+        <div id="combo" class="combo"></div>
+        <div id="toast" class="toast"></div>
+        <div id="coach" class="coach"></div>
+      </div>
+    </main>
+
+    <footer id="status" class="status hud hidden">
+      <div class="hud-score">
+        <span class="meta-label">свет</span>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-main">
+        <div class="hud-row">
+          <span id="wave-label" class="wave-chip">волна 1 · стая</span>
+          <span class="hud-hunger-label">
+            <span class="meta-label">сытость</span>
+            <span id="heat-pct" class="heat-pct">100%</span>
+          </span>
+        </div>
+        <div id="heat" class="heat" aria-label="Сытость">
+          <i id="heat-fill"></i>
+        </div>
+        <div class="mut-track" aria-hidden="true">
+          <div id="mut-track-fill" class="mut-track-fill"></div>
+        </div>
+        <div id="dive-meter" class="dive-meter" aria-hidden="true"><i id="dive-fill"></i></div>
+      </div>
+    </footer>
+
+    <div id="screen-start" class="screen screen-menu">
+      <div class="menu-veil" aria-hidden="true">
+        <div class="menu-veil-light"></div>
+        <div class="menu-veil-depth"></div>
+      </div>
+
+      <header class="menu-bar">
+        <p class="menu-meta" aria-label="Прогресс">
+          <span><span data-i18n="record">рекорд</span> <strong id="best-start">0</strong></span>
+          <span class="menu-sep" aria-hidden="true">·</span>
+          <span id="marks-start">0 следов</span>
+        </p>
+        <div class="menu-toggles" role="group" aria-label="Настройки">
+          <button id="btn-sound" class="menu-toggle on" type="button" aria-pressed="true" aria-label="Звук">звук</button>
+          <button id="btn-haptics" class="menu-toggle on" type="button" aria-pressed="true" aria-label="Вибрация">вибро</button>
+          <button id="btn-lang" class="menu-toggle" type="button" aria-label="Switch to English">EN</button>
+        </div>
+      </header>
+
+      <button id="btn-shop" class="btn-shop-top" type="button" aria-label="Открыть магазин">
+        <span class="btn-shop-top-copy">
+          <span class="btn-shop-top-main" data-i18n="shop">Магазин</span>
+          <span id="donate-thanks" class="btn-shop-top-sub" data-i18n="shop_sub">герои · следы · донат</span>
+        </span>
+        <span class="btn-shop-top-marks" id="shop-top-marks" aria-hidden="true">0</span>
+      </button>
+
+      <div class="menu-main">
+        <p class="brand menu-brand">ОТТИСК</p>
+        <h1 class="menu-title" data-i18n="hold_title">Удерживай палец</h1>
+        <p class="menu-lead" data-i18n="hold_lead">Существо живёт только в касании</p>
+
+        <div class="actions menu-play">
+          <button id="btn-start" class="btn btn-primary btn-play" type="button">
+            <span class="btn-main" data-i18n="play">Играть</span>
+            <span class="btn-sub" id="btn-start-sub">первый забег сразу</span>
+          </button>
+        </div>
+
+        <div id="control-list" class="control-row" role="group" aria-label="Управление"></div>
+        <div class="mode-row" role="group" aria-label="Режимы">
+          <button id="btn-mode-daily" class="menu-toggle" type="button" aria-pressed="false" data-i18n="daily">день</button>
+          <button id="btn-mode-coop" class="menu-toggle" type="button" aria-pressed="false" data-i18n="coop">дуэт</button>
+        </div>
+        <div class="run-mode-row" role="group" aria-label="Тип забега">
+          <button class="menu-toggle run-mode-btn" data-run-mode="endless" type="button" aria-pressed="false" data-i18n="endless">бесконечный</button>
+          <button class="menu-toggle run-mode-btn" data-run-mode="boss" type="button" aria-pressed="false" data-i18n="boss_rush">боссы</button>
+          <button class="menu-toggle run-mode-btn" data-run-mode="calm" type="button" aria-pressed="false" data-i18n="calm">спокойный</button>
+        </div>
+        <p id="mode-note" class="menu-note quiet">обычный забег</p>
+        <div class="access-row" role="group" aria-label="Доступность">
+          <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
+          <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
+          <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
+        </div>
+      </div>
+
+      <div class="menu-more">
+        <p id="daily-quest" class="menu-note" aria-live="polite"></p>
+        <p id="weekly-card" class="menu-note weekly-card" aria-live="polite"></p>
+        <section id="menu-trophies" class="menu-trophies" aria-label="Трофеи">
+          <p class="menu-section-label" data-i18n="trophies">Трофеи</p>
+          <div id="trophy-list" class="trophy-list" role="list"></div>
+        </section>
+
+        <section id="menu-gifts" class="menu-gifts hidden" aria-label="Подарки">
+          <div id="gift-list" class="gift-rail" role="list"></div>
+        </section>
+        <p id="gift-next" class="menu-note quiet hidden" aria-live="polite"></p>
+        <p id="shop-progress" class="menu-note shop-progress" aria-live="polite"></p>
+
+        <section class="data-tools" aria-label="Перенос прогресса">
+          <p class="menu-section-label" data-i18n="progress">Прогресс</p>
+          <p class="menu-note quiet" data-i18n="progress_help">Сохрани файл или перенеси код на другое устройство.</p>
+          <div class="data-tools-row">
+            <button id="btn-backup-export" class="menu-link" type="button" data-i18n="save">Сохранить</button>
+            <button id="btn-backup-code" class="menu-link" type="button" data-i18n="transfer_code">Код переноса</button>
+            <button id="btn-backup-import" class="menu-link" type="button" data-i18n="load">Загрузить</button>
+          </div>
+          <input id="backup-file" class="hidden" type="file" accept="application/json,.json" />
+        </section>
+
+        <section class="data-tools cloud-tools" aria-label="Облачный прогресс">
+          <p class="menu-section-label" data-i18n="cloud">Облако и рейтинг</p>
+          <p id="cloud-status" class="menu-note quiet">не подключено · игра работает офлайн</p>
+          <div class="data-tools-row">
+            <button id="btn-cloud-account" class="menu-link" type="button" data-i18n="cloud_setup">Подключить</button>
+            <button id="btn-cloud-sync" class="menu-link" type="button" data-i18n="cloud_sync">Синхронизировать</button>
+            <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
+          </div>
+          <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
+          <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
+        </section>
+
+        <nav class="menu-foot" aria-label="Дополнительно">
+          <button id="btn-donate" class="menu-link" type="button">
+            <span class="btn-donate-main">Донат</span>
+            <span class="btn-donate-sub">поддержать игру</span>
+          </button>
+          <a href="./landing.html" data-i18n="about">О игре</a>
+          <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
+          <a href="./support.html" data-i18n="support">Поддержка</a>
+        </nav>
+      </div>
+
+      <!-- kept for JS economy hooks; hidden on start -->
+      <span id="streak-start" class="hidden">0 дн</span>
+      <span id="skin-name" class="hidden">чернь</span>
+      <div id="daily-card" class="hidden"></div>
+      <div id="skin-unlocks" class="hidden"></div>
+      <button id="btn-marks-pack" class="hidden" type="button">+60 следов</button>
+      <i id="hold-fill" class="hidden" aria-hidden="true"></i>
+    </div>
+
+    <div id="screen-hero" class="screen screen-flow hidden">
+      <div class="menu-veil" aria-hidden="true">
+        <div class="menu-veil-light"></div>
+        <div class="menu-veil-depth"></div>
+      </div>
+      <div class="flow-shell">
+        <button id="btn-hero-back" class="flow-back" type="button">назад</button>
+        <p class="flow-kicker">Шаг 1 · герой</p>
+        <canvas id="hero-portrait" class="hero-portrait" width="420" height="420" aria-label="Портрет героя"></canvas>
+        <h2 id="hero-pick-name" class="flow-title">осьминог</h2>
+        <p id="hero-ability-hint" class="flow-sub">рывок</p>
+        <p id="hero-lock-hint" class="flow-sub hero-lock-hint hidden"></p>
+        <button id="btn-buy-marks-hero" class="menu-link flow-draw hidden" type="button">купить следы</button>
+        <div id="hero-list" class="hero-rail" role="listbox" aria-label="Выбор героя"></div>
+        <button id="btn-draw-hero" class="menu-link flow-draw" type="button">нарисовать своего</button>
+        <button id="btn-hero-next" class="btn btn-primary" type="button">
+          <span class="btn-main">Дальше</span>
+          <span class="btn-sub">сложность</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="screen-diff" class="screen screen-flow hidden">
+      <div class="menu-veil" aria-hidden="true">
+        <div class="menu-veil-light"></div>
+        <div class="menu-veil-depth"></div>
+      </div>
+      <div class="flow-shell">
+        <button id="btn-diff-back" class="flow-back" type="button">назад</button>
+        <p class="flow-kicker">Шаг 2 · сложность</p>
+        <h2 class="flow-title">Как играем?</h2>
+        <p class="flow-sub">Выбор сразу запускает забег</p>
+        <div id="difficulty-list" class="diff-pick" role="group" aria-label="Сложность"></div>
+      </div>
+    </div>
+
+    <div id="screen-donate" class="screen hidden">
+      <div class="screen-bg dim" aria-hidden="true"></div>
+      <div class="over-card donate-card shop-card">
+        <div class="shop-head">
+          <p class="over-label">Магазин</p>
+          <p class="brand over-brand">СЛЕДЫ</p>
+          <p class="shop-lead">Покупай героев и косметику за следы или поддержи игру.</p>
+          <div class="shop-balance-row">
+            <p id="shop-balance" class="shop-balance">0 следов</p>
+            <p class="shop-balance-hint">валюта забегов</p>
+          </div>
+          <p id="shop-hero-goal" class="shop-goal"></p>
+        </div>
+
+        <section class="shop-block" aria-labelledby="shop-packs-label">
+          <h3 id="shop-packs-label" class="shop-section-label">Следы и наборы</h3>
+          <p class="shop-section-hint">Следы открывают героев и рамки. Набор — сразу три героя.</p>
+          <div class="shop-section">
+            <button id="btn-shop-pack" class="btn btn-primary" type="button">
+              <span class="btn-main">+60 следов</span>
+              <span class="btn-sub" id="shop-pack-sub">пак · App Store / донат</span>
+            </button>
+            <button id="btn-shop-starter" class="btn btn-secondary" type="button">
+              <span class="btn-main">Стартовый пак · 199 ₽</span>
+              <span class="btn-sub">3 героя + 60 следов</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="shop-block" aria-labelledby="shop-heroes-label">
+          <h3 id="shop-heroes-label" class="shop-section-label">Герои</h3>
+          <p class="shop-section-hint">Уникальные способности. Купил — навсегда.</p>
+          <div id="shop-iap-heroes" class="shop-iap-heroes"></div>
+          <button id="btn-restore" class="btn btn-ghost shop-restore" type="button">
+            <span class="btn-main">Восстановить покупки</span>
+            <span class="btn-sub">App Store</span>
+          </button>
+        </section>
+
+        <section class="shop-block" aria-labelledby="shop-cosmo-label">
+          <h3 id="shop-cosmo-label" class="shop-section-label">Косметика</h3>
+          <p class="shop-section-hint">Скины, следы и рамки за следы.</p>
+          <div id="shop-cosmetics" class="shop-cosmetics" role="list"></div>
+        </section>
+
+        <section class="shop-block" aria-labelledby="shop-support-label">
+          <h3 id="shop-support-label" class="shop-section-label">Поддержать</h3>
+          <p class="shop-section-hint">Добровольный донат — помогает делать ОТТИСК дальше.</p>
+          <div id="donate-list" class="donate-list" role="list"></div>
+          <p id="donate-note" class="donate-note">В App Store — покупка внутри игры. На сайте — страница доната.</p>
+        </section>
+
+        <button id="btn-donate-close" class="btn btn-ghost" type="button">
+          <span class="btn-main">Назад в меню</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="screen-draw" class="screen hidden">
+      <div class="screen-bg dim" aria-hidden="true"></div>
+      <div class="draw-card">
+        <p class="over-label">Свой герой</p>
+        <p class="hint continue-hint">Рисуй пальцем в квадрате, потом нажми «Сохранить».</p>
+        <canvas id="draw-canvas" width="320" height="320" class="draw-canvas" aria-label="Холст для рисования"></canvas>
+        <div class="draw-tools" role="group" aria-label="Цвета">
+          <button class="draw-color on" type="button" data-color="#fff1e4" aria-label="светлый"></button>
+          <button class="draw-color" type="button" data-color="#ff8a52" aria-label="оранжевый"></button>
+          <button class="draw-color" type="button" data-color="#7affd4" aria-label="мята"></button>
+          <button class="draw-color" type="button" data-color="#7ab8ff" aria-label="синий"></button>
+          <button class="draw-color" type="button" data-color="#ff5d7a" aria-label="красный"></button>
+          <button class="draw-color" type="button" data-color="#1a1020" aria-label="тёмный"></button>
+        </div>
+        <div class="draw-actions">
+          <button id="btn-draw-clear" class="btn btn-ghost" type="button"><span class="btn-main">Очистить</span></button>
+          <button id="btn-draw-cancel" class="btn btn-ghost" type="button"><span class="btn-main">Отмена</span></button>
+          <button id="btn-draw-save" class="btn btn-primary" type="button">
+            <span class="btn-main">Сохранить</span>
+            <span class="btn-sub">играть своим</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-onboard" class="screen hidden">
+      <div class="screen-bg dim" aria-hidden="true"></div>
+      <div class="over-card onboard-card">
+        <p class="over-label">Как играть</p>
+        <p class="brand over-brand">ОТТИСК</p>
+        <p id="onboard-text" class="hint continue-hint">Удерживай палец — существо живёт только в касании.</p>
+        <button id="btn-onboard" class="btn btn-primary" type="button">
+          <span class="btn-main" id="onboard-label">Дальше</span>
+          <span class="btn-sub" id="onboard-sub">шаг 1 из 3</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="screen-continue" class="screen hidden">
+      <div class="screen-bg dim" aria-hidden="true"></div>
+      <div class="over-card continue-card">
+        <p class="over-label">Ещё один след</p>
+        <p class="brand over-brand">ВТОРОЙ ШАНС</p>
+        <p id="continue-reason" class="death-reason"></p>
+        <p id="continue-hint" class="hint continue-hint">Один бесплатный шанс за забег. Дальше — за следы или 10 ₽.</p>
+        <button id="btn-continue" class="btn btn-primary" type="button">
+          <span class="btn-main" id="continue-label">Продолжить</span>
+          <span class="btn-sub" id="continue-sub">бесплатно · 1 раз</span>
+        </button>
+        <button id="btn-continue-iap" class="btn btn-secondary hidden" type="button">
+          <span class="btn-main">Продолжить · 10 ₽</span>
+          <span class="btn-sub">App Store / донат</span>
+        </button>
+        <button id="btn-continue-shop" class="btn btn-secondary hidden" type="button">
+          <span class="btn-main">Купить следы</span>
+          <span class="btn-sub">+60 · потом продолжить</span>
+        </button>
+        <button id="btn-skip-continue" class="btn btn-ghost" type="button">
+          <span class="btn-main">Закончить</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="screen-over" class="screen hidden">
+      <div class="screen-bg dim" aria-hidden="true"></div>
+      <div class="over-card">
+        <p class="over-label" data-i18n="run_broken">След оборвался</p>
+        <p class="brand over-brand">ОТТИСК</p>
+        <p id="final-score" class="final-score">0</p>
+        <p class="over-sub" data-i18n="light">света</p>
+        <p id="run-summary" class="run-summary"></p>
+        <p id="death-reason" class="death-reason"></p>
+        <p id="mut-summary" class="mut-summary"></p>
+        <p id="skin-result" class="skin-result"></p>
+        <p id="daily-result" class="daily-result"></p>
+        <p id="daily-mode-result" class="daily-result hidden"></p>
+        <p id="marks-result" class="marks-result"></p>
+        <p id="next-goal" class="next-goal"></p>
+        <div id="death-offers" class="death-offers hidden" aria-label="Предложения"></div>
+        <p class="best">Рекорд <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
+        <div class="over-actions">
+          <button id="btn-rate" class="btn btn-secondary hidden" type="button">
+            <span class="btn-main">Оценить</span>
+            <span class="btn-sub">если след понравился</span>
+          </button>
+          <button id="btn-share" class="btn btn-secondary" type="button">
+            <span class="btn-main" data-i18n="share">Поделиться</span>
+            <span class="btn-sub">Stories · волна и герой</span>
+          </button>
+          <button id="btn-buy-marks" class="btn btn-secondary" type="button">
+            <span class="btn-main">Купить следы</span>
+            <span class="btn-sub">герои · косметика · continue</span>
+          </button>
+          <button id="btn-retry" class="btn btn-primary" type="button">
+            <span class="btn-main" data-i18n="retry">Ещё раз</span>
+            <span class="btn-sub">новый забег</span>
+          </button>
+          <button id="btn-menu" class="btn btn-ghost" type="button">
+            <span class="btn-main" data-i18n="menu">В меню</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="mechanic-card" class="mechanic-card hidden" role="status" aria-live="polite">
+      <p id="mechanic-card-title" class="mechanic-card-title"></p>
+      <p id="mechanic-card-body" class="mechanic-card-body"></p>
+    </div>
+    <canvas id="share-canvas" width="720" height="900" class="share-canvas" aria-hidden="true"></canvas>
+  </div>
+  <script>
+    (async () => {
+      const stamp = "ottisk-force-v77";
+      if (localStorage.getItem(stamp)) return;
+      localStorage.setItem(stamp, "1");
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter((k) => k.startsWith("ottisk-")).map((k) => caches.delete(k)));
+        }
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+      } catch (_) {}
+      const url = new URL(location.href);
+      url.searchParams.set("v", "77");
+      location.replace(url.toString());
+    })();
+  </script>
+  <script src="js/analytics.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/perf.js"></script>
+  <script src="js/balance-tuner.js"></script>
+  <script src="js/native.js" type="module"></script>
+  <script src="js/game.js?v=77" type="module"></script>
+</body>
+</html>
