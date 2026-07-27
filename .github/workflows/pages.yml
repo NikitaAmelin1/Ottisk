@@ -32,10 +32,10 @@ jobs:
           mkdir -p _site
           # Static web assets only (skip native/mobile tooling)
           for item in \
-            index.html landing.html donate.html privacy.html support.html \
+            index.html landing.html donate.html privacy.html support.html editor.html \
             manifest.json sw.js robots.txt sitemap.xml .nojekyll \
             ottisk-ad-ru-15s.mp4 \
-            css js assets icons store; do
+            css js assets icons store content; do
             if [ -e "$item" ]; then
               cp -a "$item" _site/
             fi

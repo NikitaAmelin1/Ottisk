@@ -6173,46 +6173,7 @@ function rollSparkType() {
 }
 
 function maybeSpawnSuperStar() {
-  if (!state.running || state.score >= 100 || state.superStarEaten) return;
-  if (state.sparks.some((s) => s.type === "super")) return;
-  const ready = state.stats.sparkEats >= 1 || state.elapsed > 3.2;
-  if (!ready) return;
-  const margin = 56;
-  const side = Math.floor(Math.random() * 4);
-  let x = state.width * 0.72;
-  let y = state.height * 0.28;
-  if (side === 0) {
-    x = rand(margin, state.width - margin);
-    y = margin + 24;
-  } else if (side === 1) {
-    x = state.width - margin - 10;
-    y = rand(margin, state.height * 0.55);
-  } else if (side === 2) {
-    x = rand(margin, state.width - margin);
-    y = state.height - margin - 24;
-  } else {
-    x = margin + 10;
-    y = rand(margin, state.height * 0.55);
-  }
-  if (state.life && dist(x, y, state.life.x, state.life.y) < 110) {
-    x = clamp(state.width - state.life.x, margin, state.width - margin);
-    y = clamp(state.height * 0.25, margin, state.height - margin);
-  }
-  const profile = sparkProfile("super");
-  state.sparks.push({
-    x,
-    y,
-    vx: rand(-0.25, 0.25),
-    vy: rand(-0.25, 0.25),
-    pulse: Math.random() * Math.PI * 2,
-    tutorial: false,
-    grace: 0.55,
-    pinned: true,
-    ...profile,
-  });
-  state.superStarSpawned = true;
-  tipOnce("super", "ПУЛЬСАР", 1800);
-  floatText(x, y - 28, "ПУЛЬСАР", "#ff2f45", 18);
+  // Disabled: the early-game ПУЛЬСАР orb was too large and distracting.
 }
 
 function spawnComet() {
