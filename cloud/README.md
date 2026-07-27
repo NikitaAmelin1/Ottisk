@@ -181,3 +181,10 @@ node --check cloud/src/worker.mjs
 node --check js/cloud.js
 node --check js/social.js
 ```
+
+## Быстрый старт для GitHub Pages
+
+1. Скопируй `wrangler.toml.example` → `wrangler.toml`, создай D1 и примени миграции.
+2. `npx wrangler deploy` и скопируй URL Worker.
+3. В игре: меню → **Облако** → вставь URL → **Сохранить URL** → **Подключить**.
+   Либо пропиши URL в `<meta name="ottisk-cloud-api" content="...">` в `index.html`.

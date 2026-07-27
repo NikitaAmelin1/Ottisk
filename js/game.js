@@ -477,7 +477,7 @@ const WAVES = [
   },
 ];
 
-const MIX_SPECIES = ["fish", "dart", "jelly", "eel", "shark", "ray", "ghost"];
+const MIX_SPECIES = ["fish", "dart", "jelly", "eel", "shark", "ray", "ghost", "crab", "urchin", "mirror"];
 
 const customHeroImage = { img: null, src: "", ready: false };
 
@@ -1856,6 +1856,19 @@ function playPredatorSfx(species, kind = "call") {
     else sfxGhostCall();
     return;
   }
+  if (species === "crab") {
+    playOsc({ freq: 140, endFreq: 90, type: "triangle", gain: 0.02, dur: 0.09, filterFreq: 600 });
+    playNoise({ gain: 0.014, dur: 0.07, filterFreq: 500, endFilter: 180, filterType: "bandpass", filterQ: 1.4 });
+    return;
+  }
+  if (species === "urchin") {
+    playOsc({ freq: 520, endFreq: 260, type: "sine", gain: 0.016, dur: 0.12 });
+    return;
+  }
+  if (species === "mirror") {
+    playOsc({ freq: 880, endFreq: 1320, type: "triangle", gain: 0.015, dur: 0.08, filterFreq: 3200 });
+    return;
+  }
   if (species === "boss") {
     if (kind === "charge") sfxBossCharge();
     else if (kind === "warn") sfxBossWarn();
@@ -1915,6 +1928,8 @@ function playSparkTone(type) {
   else if (type === "comet") sfxCometEat();
   else if (type === "deep") sfxDeepEat();
   else if (type === "seed") sfxSeedEat();
+  else if (type === "ember") sfxCometEat();
+  else if (type === "mirror") sfxCoolEat();
   else sfxPlanktonEat(state.combo || 0);
 }
 
@@ -1962,6 +1977,11 @@ function startRunEvent(def) {
     for (let i = 0; i < 5; i += 1) spawnSpark({ edge: true, type: i === 0 ? "rare" : null });
   } else if (def.id === "tangled-path") {
     spawnHunter(false);
+  } else if (def.id === "mirror-tide") {
+    spawnHunter(false);
+    spawnSpark({ edge: true, type: "mirror" });
+  } else if (def.id === "ember-rain") {
+    for (let i = 0; i < 4; i += 1) spawnSpark({ edge: true, type: i === 0 ? "ember" : null });
   }
 }
 
@@ -2256,6 +2276,15 @@ function midgamePace() {
   // Easy stays gentler late; hard keeps more pressure.
   if (playerDifficulty().id === "easy") pace *= 0.94;
   if (playerDifficulty().id === "hard") pace = Math.min(1, pace + 0.06);
+  // Live balance tuner softens/hardens the mid-run spike from analytics.
+  const tuned = Number(state.tuning?.hunterSpeed);
+  if (Number.isFinite(tuned) && tuned > 0) {
+    pace *= clamp(0.86 + (tuned - 1) * 0.45, 0.78, 1.06);
+  }
+  const hungerTune = Number(state.tuning?.hungerDrain);
+  if (Number.isFinite(hungerTune) && hungerTune > 1.02) {
+    pace = Math.min(1, pace + 0.03);
+  }
   return pace;
 }
 
@@ -2335,7 +2364,7 @@ function applySpeciesToHunter(hunter, species) {
   const kind = rollHunterSpecies(species);
   hunter.species = kind;
   hunter.boss = kind === "boss";
-  hunter.dashCd = kind === "dart" ? rand(0.4, 1.1) : kind === "shark" ? rand(2.2, 3.4) : kind === "ghost" ? rand(1.4, 2.4) : kind === "boss" ? rand(1.6, 2.4) : 0;
+  hunter.dashCd = kind === "dart" || kind === "mirror" ? rand(0.4, 1.1) : kind === "shark" ? rand(2.2, 3.4) : kind === "ghost" ? rand(1.4, 2.4) : kind === "crab" ? rand(1.8, 2.8) : kind === "boss" ? rand(1.6, 2.4) : 0;
   hunter.dashT = 0;
   hunter.pulse = Math.random() * Math.PI * 2;
   hunter.weave = Math.random() * Math.PI * 2;
@@ -2346,12 +2375,17 @@ function applySpeciesToHunter(hunter, species) {
   else if (kind === "shark") hunter.r = rand(16, 20);
   else if (kind === "ray") hunter.r = rand(18, 23);
   else if (kind === "ghost") hunter.r = rand(13, 17);
+  else if (kind === "crab") hunter.r = rand(15, 19);
+  else if (kind === "urchin") hunter.r = rand(16, 21);
+  else if (kind === "mirror") hunter.r = rand(12, 15);
   else if (kind === "boss") {
     hunter.r = 40;
     hunter.bossPhase = "orbit";
     hunter.bossTimer = 2.1;
     hunter.anger = Math.max(hunter.anger || 1, 1.05);
   } else hunter.r = rand(15, 19);
+  if (kind === "crab") hunter.dashCd = rand(1.8, 2.8);
+  if (kind === "mirror") hunter.dashCd = rand(0.9, 1.6);
 }
 
 function spawnBoss() {
@@ -2478,7 +2512,7 @@ function syncWave(announce = true) {
   return wave;
 }
 
-function floatText(x, y, text, color = "#f2c15a", size = 16) {
+function floatText(x, y, text, color = "#f2c15a", size = 13) {
   if (state.floaters.length >= MAX_FLOATERS) {
     state.floaters[0] = state.floaters[state.floaters.length - 1];
     state.floaters.pop();
@@ -2919,6 +2953,7 @@ function loadMeta() {
       : [],
     coopEnabled: !!raw?.coopEnabled,
     dailyModeEnabled: !!raw?.dailyModeEnabled,
+    ghostRaceEnabled: raw?.ghostRaceEnabled !== false,
     bossClears: {
       leviathan: Math.max(0, Number(raw?.bossClears?.leviathan || 0)),
       kraken: Math.max(0, Number(raw?.bossClears?.kraken || 0)),
@@ -5410,6 +5445,69 @@ function grantStarterPack(fromPurchase = false) {
   showToast(fromPurchase ? "пак открыт · 3 героя + 60 следов" : "стартовый пак");
 }
 
+function resolveNextStep() {
+  if (!state.meta) return null;
+  const daily = currentDailyDef();
+  if (daily && !state.meta.dailyDone) {
+    return {
+      title: `Цель · ${daily.title}`,
+      sub: daily.label(state),
+      run: () => {
+        state.meta.dailyModeEnabled = true;
+        saveMeta();
+        updateModeToggles();
+        hideFlowScreens();
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  if (!state.meta.weekRewardTaken) {
+    const quest = currentWeeklyDef();
+    const progress = Math.min(quest.target, state.meta.weekProgress || 0);
+    return {
+      title: `Цель · ${quest.title}`,
+      sub: `${progress}/${quest.target} ${quest.unit}`,
+      run: () => {
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  const hero = nextLockedPremiumHero();
+  if (hero) {
+    return {
+      title: `Открыть · ${hero.name}`,
+      sub: `${Math.min(state.meta.marks || 0, hero.cost)}/${hero.cost} следов`,
+      run: () => {
+        goToMenu();
+        document.getElementById("btn-shop")?.click();
+      },
+    };
+  }
+  if ((state.meta.ghostScore || 0) >= 20 && state.meta.ghostRaceEnabled !== false) {
+    return {
+      title: "Гонка с призраком",
+      sub: `лучший след · ${state.meta.ghostScore}`,
+      run: () => {
+        state.meta.ghostRaceEnabled = true;
+        saveMeta();
+        updateModeToggles();
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  return {
+    title: "Новый рекорд",
+    sub: "ещё один забег",
+    run: () => {
+      screenOverEl.classList.add("hidden");
+      startGame();
+    },
+  };
+}
+
 function nextDeathOfferHero() {
   return HEROES.find((h) => h.iap && !isHeroOwned(h.id)) || null;
 }
@@ -5418,23 +5516,22 @@ function renderDeathOffers() {
   const box = document.getElementById("death-offers");
   if (!box || !state.meta) return;
   box.textContent = "";
-  const runs = state.meta.runs || 0;
-  const hero = nextDeathOfferHero();
-  if (hero) {
+  const step = resolveNextStep();
+  if (step) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-secondary death-offer";
-    btn.innerHTML = `<span class="btn-main">${hero.name} · ${hero.priceLabel || ""}</span><span class="btn-sub">${hero.blurb || hero.ability} · уникальная сила</span>`;
-    btn.addEventListener("click", () => purchaseIapHero(hero.id).catch(() => {}));
+    btn.innerHTML = `<span class="btn-main">${step.title}</span><span class="btn-sub">${step.sub}</span>`;
+    btn.addEventListener("click", () => step.run());
     box.appendChild(btn);
   }
-  if (!state.meta.starterPackBought && runs >= 1 && runs <= 8) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-secondary death-offer starter";
-    btn.innerHTML = `<span class="btn-main">Стартовый пак · ${STARTER_PACK_PRICE_LABEL}</span><span class="btn-sub">скат + удильщик + наутилус · +60 следов</span>`;
-    btn.addEventListener("click", () => purchaseStarterPack().catch(() => {}));
-    box.appendChild(btn);
+  const shareSub = document.getElementById("share-sub");
+  if (shareSub) {
+    shareSub.textContent = state.meta.dailyDone
+      ? `ежедневка · +${DAILY_QUEST_REWARD} следов`
+      : state.dailyMode
+        ? "забег дня · Stories"
+        : "Stories · волна и герой";
   }
   box.classList.toggle("hidden", !box.childElementCount);
 }
@@ -5442,6 +5539,7 @@ function renderDeathOffers() {
 function updateModeToggles() {
   const dailyBtn = document.getElementById("btn-mode-daily");
   const coopBtn = document.getElementById("btn-mode-coop");
+  const ghostBtn = document.getElementById("btn-mode-ghost");
   if (dailyBtn) {
     dailyBtn.classList.toggle("on", !!state.meta?.dailyModeEnabled);
     dailyBtn.setAttribute("aria-pressed", state.meta?.dailyModeEnabled ? "true" : "false");
@@ -5449,6 +5547,11 @@ function updateModeToggles() {
   if (coopBtn) {
     coopBtn.classList.toggle("on", !!state.meta?.coopEnabled);
     coopBtn.setAttribute("aria-pressed", state.meta?.coopEnabled ? "true" : "false");
+  }
+  if (ghostBtn) {
+    const on = state.meta?.ghostRaceEnabled !== false;
+    ghostBtn.classList.toggle("on", on);
+    ghostBtn.setAttribute("aria-pressed", on ? "true" : "false");
   }
   document.querySelectorAll(".run-mode-btn").forEach((button) => {
     const selected = button.dataset.runMode === (state.meta?.runMode || "normal");
@@ -5460,6 +5563,7 @@ function updateModeToggles() {
     const bits = [];
     if (state.meta?.dailyModeEnabled) bits.push("забег дня");
     if (state.meta?.coopEnabled) bits.push("дуэт");
+    if (state.meta?.ghostRaceEnabled !== false && (state.meta?.ghostScore || 0) >= 20) bits.push("призрак");
     if (state.meta?.runMode === "endless") bits.push(tr("mode_endless", "бесконечный океан"));
     if (state.meta?.runMode === "boss") bits.push(tr("mode_boss", "босс-раш"));
     if (state.meta?.runMode === "calm") bits.push(tr("mode_calm", "спокойный режим"));
@@ -5554,6 +5658,7 @@ function persistGhostPath() {
 function spawnRunGhost() {
   state.ghost = null;
   state.ghostIndex = 0;
+  if (state.meta?.ghostRaceEnabled === false) return;
   const path = state.meta?.ghostPath;
   if (!path || path.length < 8) return;
   if ((state.meta.ghostScore || 0) < 20) return;
@@ -5769,7 +5874,7 @@ function createLife(x, y, opts = {}) {
       buzz([14, 28, 14]);
       if (state.tutorialRun) {
         state.tutorialStep = Math.max(state.tutorialStep, 2);
-        showCoach("ШАГ 2 · ВЕДИ К БЛИЖАЙШЕМУ СВЕТУ", 2200, true);
+        showCoach("К СВЕТУ", 1800, true);
       } else {
         showCoach("ЕШЬ СВЕТ", 1500, true);
       }
@@ -5952,7 +6057,14 @@ function shareText() {
   const wave = waveForScore(state.score);
   const waveN = waveNumber(wave);
   const hero = activeHero();
-  return `Мой след в ОТТИСК: ${state.score} света · волна ${waveN} · ${hero.name}. ${SHARE_URL}`;
+  const bits = [`Мой след в ОТТИСК: ${state.score} света · волна ${waveN} · ${hero.name}`];
+  if (state.dailyMode) bits.push("забег дня");
+  if (state.meta?.dailyDone) bits.push(`ежедневка ✓ · +${DAILY_QUEST_REWARD} следов`);
+  if ((state.meta?.ghostScore || 0) > 0 && state.meta?.ghostRaceEnabled !== false) {
+    bits.push(`призрак ${state.meta.ghostScore}`);
+  }
+  bits.push(SHARE_URL);
+  return bits.join(" · ");
 }
 
 function canvasToBlob(canvasEl) {
@@ -6126,7 +6238,7 @@ async function shareRun() {
 
 function sparkProfile(type) {
   if (type === "super") {
-    return { type, worth: 10, restore: 48, color: "#ff2f45", r: rand(18, 22), super: true, form: "pulsar" };
+    return { type, worth: 10, restore: 48, color: "#ff2f45", r: rand(14, 17), super: true, form: "pulsar" };
   }
   if (type === "rare") {
     return { type, worth: 3, restore: 35, color: "#ffcc44", r: rand(14, 18), form: "prism" };
@@ -6145,6 +6257,12 @@ function sparkProfile(type) {
   }
   if (type === "seed") {
     return { type, worth: 2, restore: 16, color: "#58ffb0", r: rand(13, 16.5), seed: true, form: "seed" };
+  }
+  if (type === "ember") {
+    return { type, worth: 3, restore: 30, color: "#ff9a62", r: rand(13, 16), form: "ember" };
+  }
+  if (type === "mirror") {
+    return { type, worth: 2, restore: 20, color: "#9be7ff", r: rand(12, 15), form: "mirror", mirror: true };
   }
   const normals = ["#ffd080", "#ffb868", "#7affd4", "#9ad0ff", cssVar("--accent-b", "#62f0c8")];
   return {
@@ -6165,10 +6283,12 @@ function rollSparkType() {
     return "normal";
   }
   const r = Math.random();
-  if (r < 0.1) return "rare";
-  if (r < 0.2) return "cool";
-  if (r < 0.27) return "bait";
-  if (r < 0.32 && !state.symbiote) return "seed";
+  if (r < 0.09) return "rare";
+  if (r < 0.17) return "cool";
+  if (r < 0.23) return "bait";
+  if (r < 0.28) return "ember";
+  if (r < 0.32) return "mirror";
+  if (r < 0.36 && !state.symbiote) return "seed";
   return "normal";
 }
 
@@ -6506,26 +6626,26 @@ function startGame() {
     state.demo = false;
     state.lastTs = performance.now();
     const coach = state.tutorialRun
-      ? "ШАГ 1 · НАЖМИ И ДЕРЖИ"
+      ? "ДЕРЖИ ПАЛЕЦ"
       : state.runMode === "boss"
         ? "БОСС-РАШ"
         : state.runMode === "endless"
-          ? "БЕСКОНЕЧНЫЙ ОКЕАН"
+          ? "ОКЕАН"
           : state.runMode === "calm"
-            ? "СПОКОЙНЫЙ РЕЖИМ"
+            ? "СПОКОЙНО"
       : state.coopMode
       ? "ДВА ПАЛЬЦА"
       : state.dailyMode
         ? "ЗАБЕГ ДНЯ"
         : controlMode() === "joystick"
           ? "ДЕРЖИ СТИК"
-          : "УДЕРЖИВАЙ";
-    showCoach(coach, 1700, true);
+          : "ДЕРЖИ";
+    showCoach(coach, 1400, true);
     setTimeout(() => maybeShowHeroAbilityTip(), 1900);
-    if (!state.tutorialRun) {
+    if (!state.tutorialRun && (state.meta?.runs || 0) < 2) {
       setTimeout(() => {
-        showMechanicCard("hold", "Касание", "Пока палец на экране — ты жив. Отпусти — след гаснет.");
-      }, 2400);
+        showMechanicCard("hold", "Касание", "Палец на экране — живёшь.");
+      }, 2200);
     }
     if (state.ghost) {
       setTimeout(() => {
@@ -6955,6 +7075,14 @@ function eatSpark(index, spark) {
     buzz(6);
   } else if (spark.type === "seed") {
     attachSymbiote(spark.x, spark.y);
+  } else if (spark.type === "mirror") {
+    state.safeUntil = Math.max(state.safeUntil || 0, performance.now() + 1600);
+    floatText(spark.x, spark.y - 16, "отражение", "#9be7ff", 12);
+    buzz([6, 10, 6]);
+  } else if (spark.type === "ember") {
+    state.hunger = clamp(state.hunger + 8, 0, state.maxHunger || 100);
+    floatText(spark.x, spark.y - 16, "жар", "#ff9a62", 12);
+    buzz(7);
   } else if (spark.type !== "super") {
     buzz(5);
   }
@@ -6963,17 +7091,18 @@ function eatSpark(index, spark) {
     state.firstEatDone = true;
     goalChime();
     buzz([10, 18, 10]);
-    floatText(spark.x, spark.y - 18, "!", cssVar("--gold", "#ffe898"), 22);
+    floatText(spark.x, spark.y - 18, "!", cssVar("--gold", "#ffe898"), 18);
     if (state.tutorialRun) {
       state.tutorialStep = 3;
-      showCoach("ШАГ 3 · НЕ ОТПУСКАЙ И ОБХОДИ ХИЩНИКОВ", 2600, true);
+      showCoach("НЕ ОТПУСКАЙ", 2000, true);
     }
   }
-  if (state.stats.sparkEats === 1) tipOnce("move", "ЛОВИ СВЕТ", 1600);
+  if (state.stats.sparkEats === 1) tipOnce("move", "ЛОВИ СВЕТ", 1200);
   syncWave(true);
   playSparkTone(spark.type);
   eatSparkBlast(spark, openingEat);
-  const lightMultiplier = (state.progressionEffects?.lightMultiplier || 1) * (activeEventId() === "light-bloom" ? 1.5 : 1);
+  const lightMultiplier = (state.progressionEffects?.lightMultiplier || 1)
+    * (activeEventId() === "light-bloom" ? 1.5 : activeEventId() === "ember-rain" ? 1.35 : 1);
   addScore(Math.max(1, Math.round(spark.worth * lightMultiplier)), spark.x, spark.y - 12, { color: spark.color });
   notePremiumEat();
 }
@@ -7213,6 +7342,15 @@ function updateHunters(dt) {
       } else if (species === "ghost") {
         tx = state.life.x + Math.cos(angOff) * (orbitR * 0.7);
         ty = state.life.y + Math.sin(angOff * 1.2) * (orbitR * 0.7);
+      } else if (species === "crab") {
+        tx = state.life.x + Math.sin(hunter.weave) * 90;
+        ty = state.life.y + 36;
+      } else if (species === "urchin") {
+        tx = state.life.x + Math.cos(angOff) * 28;
+        ty = state.life.y + Math.sin(angOff) * 28;
+      } else if (species === "mirror") {
+        tx = state.width - state.life.x;
+        ty = state.height - state.life.y;
       } else if (dLife > 160) {
         tx = state.life.x;
         ty = state.life.y;
@@ -7241,10 +7379,15 @@ function updateHunters(dt) {
     if (activeEventId() === "blackout") speed *= 1.12;
     if (activeEventId() === "warm-current") speed *= 0.92;
     if (activeEventId() === "tangled-path") speed *= 1.16;
+    if (activeEventId() === "mirror-tide") speed *= 1.1;
+    if (activeEventId() === "ember-rain") speed *= 0.95;
     if (inInkDive()) speed *= 0.35;
     if (species === "dart" && hunter.dashT > 0) speed *= 2.05 * diff.dash;
     if (species === "shark" && hunter.dashT > 0) speed *= 1.75 * diff.dash;
     if (species === "ray") speed *= 0.92;
+    if (species === "crab") speed *= 0.72;
+    if (species === "urchin") speed *= 0.48;
+    if (species === "mirror") speed *= 1.05;
     if (hunter.boss || species === "boss") speed *= bossSpeedMul;
     speed *= heroAuraSlowMul(hunter);
 
@@ -8675,6 +8818,97 @@ function drawGhostHunter(hunter, alpha = 1) {
   ctx.restore();
 }
 
+function drawCrabHunter(hunter, alpha = 1) {
+  const r = hunter.r;
+  const wob = Math.sin((hunter.pulse || 0) * 2) * r * 0.06;
+  ctx.save();
+  ctx.translate(hunter.x, hunter.y);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#ff9a62";
+  ctx.beginPath();
+  ctx.ellipse(0, wob, r * 1.05, r * 0.72, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ff5a4a";
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(side * r * 0.95, -r * 0.15 + wob, r * 0.35, r * 0.22, side * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffd0b0";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(side * r * 0.55, r * 0.1);
+    ctx.quadraticCurveTo(side * r * 1.35, r * 0.55, side * r * 1.15, r * 0.95);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#fff8f0";
+  ctx.beginPath();
+  ctx.arc(-r * 0.25, -r * 0.1 + wob, r * 0.16, 0, Math.PI * 2);
+  ctx.arc(r * 0.25, -r * 0.1 + wob, r * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#1a1010";
+  ctx.beginPath();
+  ctx.arc(-r * 0.22, -r * 0.08 + wob, r * 0.07, 0, Math.PI * 2);
+  ctx.arc(r * 0.28, -r * 0.08 + wob, r * 0.07, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawUrchinHunter(hunter, alpha = 1) {
+  const r = hunter.r;
+  const pulse = hunter.pulse || 0;
+  ctx.save();
+  ctx.translate(hunter.x, hunter.y);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#9be7ff";
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#c8f7ff";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 10; i += 1) {
+    const a = (i / 10) * Math.PI * 2 + pulse * 0.2;
+    const len = r * (1.05 + 0.12 * Math.sin(pulse + i));
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r * 0.4, Math.sin(a) * r * 0.4);
+    ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#102038";
+  ctx.beginPath();
+  ctx.arc(-r * 0.12, -r * 0.08, r * 0.1, 0, Math.PI * 2);
+  ctx.arc(r * 0.16, -r * 0.08, r * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMirrorHunter(hunter, alpha = 1) {
+  const r = hunter.r;
+  const a = alpha * (0.55 + 0.35 * (0.5 + 0.5 * Math.sin((hunter.pulse || 0) * 2)));
+  ctx.save();
+  ctx.translate(hunter.x, hunter.y);
+  ctx.rotate(Math.atan2(hunter.vy || 0.01, hunter.vx || 0.01));
+  ctx.globalAlpha = a;
+  const g = ctx.createLinearGradient(-r, 0, r, 0);
+  g.addColorStop(0, "rgba(155,231,255,0.15)");
+  g.addColorStop(0.5, "rgba(245,252,255,0.95)");
+  g.addColorStop(1, "rgba(155,231,255,0.2)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(r * 1.2, 0);
+  ctx.quadraticCurveTo(0, -r * 0.7, -r, 0);
+  ctx.quadraticCurveTo(0, r * 0.7, r * 1.2, 0);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.fillStyle = "#102038";
+  ctx.beginPath();
+  ctx.arc(r * 0.25, -r * 0.12, r * 0.1, 0, Math.PI * 2);
+  ctx.arc(r * 0.25, r * 0.12, r * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawBossHunter(hunter, alpha = 1) {
   const pulse = hunter.pulse || 0;
   const aim = Math.atan2(hunter.vy || 0.01, hunter.vx || 0.01);
@@ -8879,6 +9113,9 @@ function drawHunter(hunter) {
   else if (species === "shark") drawSharkHunter(hunter, alpha);
   else if (species === "ray") drawRayHunter(hunter, alpha);
   else if (species === "ghost") drawGhostHunter(hunter, alpha);
+  else if (species === "crab") drawCrabHunter(hunter, alpha);
+  else if (species === "urchin") drawUrchinHunter(hunter, alpha);
+  else if (species === "mirror") drawMirrorHunter(hunter, alpha);
   else drawEvilFish(hunter, alpha, false);
   if (hunter.warn > 0 && !inInkDive() && species !== "boss" && !hunter.boss) {
     ctx.save();
@@ -8888,6 +9125,9 @@ function drawHunter(hunter) {
       : species === "jelly" ? "#ff7ab8"
       : species === "ray" ? "#7ef0ea"
       : species === "ghost" ? "#c8d8ff"
+      : species === "crab" ? "#ff9a62"
+      : species === "urchin" ? "#9be7ff"
+      : species === "mirror" ? "#c8f0ff"
       : cssVar("--danger", "#ff6888");
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -10221,7 +10461,21 @@ function drawParticles() {
 }
 
 function drawOpeningPulse() {
-  // No rotating rings around the octopus.
+  if (!state.life || !inOpening() || state.meta?.reduceMotion) return;
+  const life = state.life;
+  const t = state.elapsed / OPENING_SEC;
+  const glow = (1 - t) * 0.22;
+  if (glow <= 0.02) return;
+  ctx.save();
+  ctx.globalAlpha = glow;
+  const g = ctx.createRadialGradient(life.x, life.y, life.r * 0.4, life.x, life.y, life.r * 2.4);
+  g.addColorStop(0, "rgba(122, 255, 212, 0.35)");
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(life.x, life.y, life.r * 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function draw() {
@@ -10351,7 +10605,7 @@ async function renderSocial() {
       window.OttiskSocial.duels(),
     ]);
     profileEl.textContent = profile
-      ? `${profile.displayName || state.meta.cloudName || "ОТТИСК"} · ${profile.friendCode} · ${league?.league || "bronze"}${league?.rank ? ` #${league.rank}` : ""}`
+      ? `${profile.displayName || state.meta.cloudName || "ОТТИСК"} · ${profile.friendCode} · ${league?.league || "bronze"}${league?.rank ? ` #${league.rank}` : ""}${league?.leagueSize ? ` / ${league.leagueSize}` : ""}`
       : tr("error", "Ошибка");
     listEl.textContent = "";
     for (const friend of friends?.friends || []) {
@@ -10383,6 +10637,36 @@ async function renderSocial() {
     }
   } catch (error) {
     profileEl.textContent = `${tr("error", "Ошибка")} · ${error.code || error.message}`;
+  }
+}
+
+async function renderLeagueBoard() {
+  const board = document.getElementById("league-board");
+  if (!board) return;
+  if (!window.OttiskSocial?.isAvailable?.()) {
+    board.classList.remove("hidden");
+    board.innerHTML = "<li>подключи облако</li>";
+    return;
+  }
+  board.classList.remove("hidden");
+  board.innerHTML = `<li>${tr("loading", "Загрузка…")}</li>`;
+  try {
+    const league = await window.OttiskSocial.seasonLeague();
+    const entries = league?.entries || league?.board || [];
+    board.textContent = "";
+    if (!entries.length) {
+      const li = document.createElement("li");
+      li.textContent = `${league?.league || "bronze"}${league?.rank ? ` · #${league.rank}` : ""} · пока пусто`;
+      board.appendChild(li);
+      return;
+    }
+    entries.slice(0, 10).forEach((row, index) => {
+      const li = document.createElement("li");
+      li.textContent = `#${row.rank || index + 1} · ${row.displayName || "—"} · ${row.score || 0}`;
+      board.appendChild(li);
+    });
+  } catch (error) {
+    board.innerHTML = `<li>${tr("error", "Ошибка")} · ${error.code || error.message}</li>`;
   }
 }
 
@@ -10424,14 +10708,21 @@ function boot() {
   window.OttiskI18n?.apply?.();
   state.tuning = window.OttiskBalanceTuner?.fromAnalytics?.().adjustments || state.tuning;
   setupPerformanceMonitor();
+  const storedApi = (() => {
+    try { return localStorage.getItem("ottisk_cloud_api") || ""; } catch (_) { return ""; }
+  })();
   const declaredApi = document.querySelector('meta[name="ottisk-cloud-api"]')?.content?.trim();
-  if (declaredApi && !cloudConfig().apiUrl) {
+  const apiUrl = storedApi || declaredApi;
+  if (apiUrl && !cloudConfig().apiUrl) {
     window.OttiskCloud?.configure?.({
-      apiUrl: declaredApi,
+      apiUrl,
       release: "1.2.0",
       platform: window.OttiskNative?.platform || "web",
     });
   }
+  const apiInput = document.getElementById("cloud-api-input");
+  if (apiInput) apiInput.value = cloudConfig().apiUrl || storedApi || declaredApi || "";
+  window.OttiskPwa?.setup?.(document.querySelector(".menu-foot") || document.getElementById("app"));
   applyAccessibilityPrefs();
   refreshCssCache();
   ensureSeasonalUnlock();
@@ -10481,6 +10772,39 @@ function boot() {
     updateModeToggles();
     sfxUiTap(1);
     showToast(state.meta.coopEnabled ? "дуэт · два пальца" : "дуэт · выкл");
+  });
+  document.getElementById("btn-mode-ghost")?.addEventListener("click", () => {
+    if (!state.meta) return;
+    state.meta.ghostRaceEnabled = state.meta.ghostRaceEnabled === false;
+    saveMeta();
+    updateModeToggles();
+    sfxUiTap(1);
+    showToast(state.meta.ghostRaceEnabled !== false ? "призрак · вкл" : "призрак · выкл");
+  });
+  document.getElementById("btn-cloud-api-save")?.addEventListener("click", () => {
+    const input = document.getElementById("cloud-api-input");
+    const apiUrl = (input?.value || "").trim();
+    if (!apiUrl) {
+      try { localStorage.removeItem("ottisk_cloud_api"); } catch (_) {}
+      showToast("URL очищен · офлайн");
+      renderCloudStatus();
+      return;
+    }
+    try {
+      window.OttiskCloud?.configure?.({
+        apiUrl,
+        release: "1.2.0",
+        platform: window.OttiskNative?.platform || "web",
+      });
+      localStorage.setItem("ottisk_cloud_api", apiUrl);
+      renderCloudStatus();
+      showToast("облако · URL сохранён");
+    } catch (_) {
+      showToast("неверный URL");
+    }
+  });
+  document.getElementById("btn-league-board")?.addEventListener("click", () => {
+    renderLeagueBoard().catch(() => showToast("лига недоступна"));
   });
   document.querySelectorAll(".run-mode-btn").forEach((button) => {
     button.addEventListener("click", () => {
@@ -10942,7 +11266,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=77")
+      .register("./sw.js?v=80")
       .then((reg) => reg.update())
       .catch(() => {});
   }

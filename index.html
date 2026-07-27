@@ -10,12 +10,13 @@
   <meta name="description" content="ОТТИСК — удерживай палец: существо живёт только в касании." />
   <meta name="ottisk-cloud-api" content="" />
   <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=79" />
+  <link rel="stylesheet" href="css/style.css?v=80" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -96,6 +97,7 @@
         <div id="control-list" class="control-row" role="group" aria-label="Управление"></div>
         <div class="mode-row" role="group" aria-label="Режимы">
           <button id="btn-mode-daily" class="menu-toggle" type="button" aria-pressed="false" data-i18n="daily">день</button>
+          <button id="btn-mode-ghost" class="menu-toggle" type="button" aria-pressed="true" data-i18n="ghost_race">призрак</button>
           <button id="btn-mode-coop" class="menu-toggle" type="button" aria-pressed="false" data-i18n="coop">дуэт</button>
         </div>
         <div class="run-mode-row" role="group" aria-label="Тип забега">
@@ -154,7 +156,12 @@
         <section class="data-tools cloud-tools" aria-label="Облачный прогресс">
           <p class="menu-section-label" data-i18n="cloud">Облако и рейтинг</p>
           <p id="cloud-status" class="menu-note quiet">не подключено · игра работает офлайн</p>
+          <label class="cloud-api-label" for="cloud-api-input">
+            <span class="menu-note quiet">URL Worker (Cloudflare)</span>
+            <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
+          </label>
           <div class="data-tools-row">
+            <button id="btn-cloud-api-save" class="menu-link" type="button">Сохранить URL</button>
             <button id="btn-cloud-account" class="menu-link" type="button" data-i18n="cloud_setup">Подключить</button>
             <button id="btn-cloud-sync" class="menu-link" type="button" data-i18n="cloud_sync">Синхронизировать</button>
             <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
@@ -170,7 +177,9 @@
             <button id="btn-social-refresh" class="menu-link" type="button" data-i18n="refresh">Обновить</button>
             <button id="btn-social-add" class="menu-link" type="button" data-i18n="add_friend">Добавить друга</button>
             <button id="btn-social-duel" class="menu-link" type="button" data-i18n="ghost_duel">Дуэль призраков</button>
+            <button id="btn-league-board" class="menu-link" type="button" data-i18n="league">Лига сезона</button>
           </div>
+          <ol id="league-board" class="cloud-leaderboard hidden" aria-live="polite"></ol>
           <div id="social-list" class="social-list" aria-live="polite"></div>
         </section>
 
@@ -367,24 +376,24 @@
         <p id="daily-mode-result" class="daily-result hidden"></p>
         <p id="marks-result" class="marks-result"></p>
         <p id="next-goal" class="next-goal"></p>
-        <div id="death-offers" class="death-offers hidden" aria-label="Предложения"></div>
+        <div id="death-offers" class="death-offers hidden" aria-label="Следующий шаг"></div>
         <p class="best">Рекорд <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
-        <div class="over-actions">
+        <div class="over-actions over-actions-focused">
+          <button id="btn-retry" class="btn btn-primary" type="button">
+            <span class="btn-main" data-i18n="retry">Ещё раз</span>
+            <span class="btn-sub">новый забег</span>
+          </button>
+          <button id="btn-share" class="btn btn-secondary" type="button">
+            <span class="btn-main" data-i18n="share">Поделиться</span>
+            <span class="btn-sub" id="share-sub">Stories · волна и герой</span>
+          </button>
           <button id="btn-rate" class="btn btn-secondary hidden" type="button">
             <span class="btn-main">Оценить</span>
             <span class="btn-sub">если след понравился</span>
           </button>
-          <button id="btn-share" class="btn btn-secondary" type="button">
-            <span class="btn-main" data-i18n="share">Поделиться</span>
-            <span class="btn-sub">Stories · волна и герой</span>
-          </button>
-          <button id="btn-buy-marks" class="btn btn-secondary" type="button">
+          <button id="btn-buy-marks" class="btn btn-ghost over-secondary" type="button">
             <span class="btn-main">Купить следы</span>
             <span class="btn-sub">герои · косметика · continue</span>
-          </button>
-          <button id="btn-retry" class="btn btn-primary" type="button">
-            <span class="btn-main" data-i18n="retry">Ещё раз</span>
-            <span class="btn-sub">новый забег</span>
           </button>
           <button id="btn-menu" class="btn btn-ghost" type="button">
             <span class="btn-main" data-i18n="menu">В меню</span>
@@ -401,7 +410,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v78";
+      const stamp = "ottisk-force-v80";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -415,7 +424,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "78");
+      url.searchParams.set("v", "80");
       location.replace(url.toString());
     })();
   </script>
@@ -428,7 +437,8 @@
   <script src="js/progression.js"></script>
   <script src="js/perf.js"></script>
   <script src="js/balance-tuner.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=79" type="module"></script>
+  <script src="js/game.js?v=80" type="module"></script>
 </body>
 </html>

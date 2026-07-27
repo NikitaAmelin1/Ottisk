@@ -2059,18 +2059,66 @@ body {
   color: var(--life);
 }
 
-.toast {
+.coach {
   min-height: 20px;
+  max-width: 22ch;
   font-size: 12px;
-  color: var(--gold);
-  max-width: 28ch;
+  letter-spacing: 0.04em;
+  color: var(--foam);
 }
 
-.coach {
-  min-height: 22px;
+.toast {
+  min-height: 18px;
+  font-size: 11px;
+  color: var(--gold);
   max-width: 26ch;
-  font-size: 14px;
+}
+
+.install-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 8px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
   color: var(--foam);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.install-tip-btn.hidden { display: none; }
+
+.cloud-api-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.cloud-api-input {
+  width: 100%;
+  border: 1px solid rgba(243, 238, 232, 0.16);
+  border-radius: 10px;
+  background: rgba(4, 16, 28, 0.55);
+  color: var(--foam);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.over-actions-focused {
+  gap: 8px;
+}
+
+.over-actions-focused .over-secondary {
+  opacity: 0.85;
+}
+
+.death-offer {
+  width: 100%;
 }
 
 .combo.show,

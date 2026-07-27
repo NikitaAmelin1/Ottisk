@@ -177,6 +177,8 @@
       refresh: "Обновить",
       add_friend: "Добавить друга",
       ghost_duel: "Дуэль призраков",
+      ghost_race: "призрак",
+      league: "Лига сезона",
 
       // Служебные ссылки
       crashes: "отчёты об ошибках",
@@ -357,6 +359,8 @@
       refresh: "Refresh",
       add_friend: "Add friend",
       ghost_duel: "Ghost duel",
+      ghost_race: "ghost",
+      league: "Season league",
 
       // Utility links
       crashes: "anonymous crash reports",
