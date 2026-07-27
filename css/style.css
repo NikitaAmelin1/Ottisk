@@ -723,6 +723,58 @@ body {
   color: var(--gold);
 }
 
+.skill-tree {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.skill-node {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--foam);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  text-align: left;
+}
+
+.skill-node:disabled {
+  opacity: 0.48;
+}
+
+.skill-node-name {
+  font-weight: 700;
+}
+
+.skill-node-rank {
+  color: var(--gold);
+}
+
+.skill-node-desc {
+  grid-column: 1 / -1;
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.social-list {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.social-entry {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
 .menu-section-label {
   margin: 0 0 8px;
   font-size: 11px;

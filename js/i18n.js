@@ -171,6 +171,12 @@
       loading: "Загрузка…",
       success: "Готово",
       error: "Ошибка",
+      progression: "Развитие",
+      story: "История глубины",
+      social: "Друзья и лиги",
+      refresh: "Обновить",
+      add_friend: "Добавить друга",
+      ghost_duel: "Дуэль призраков",
 
       // Служебные ссылки
       crashes: "отчёты об ошибках",
@@ -345,6 +351,12 @@
       loading: "Loading…",
       success: "Done",
       error: "Error",
+      progression: "Progression",
+      story: "Story of the deep",
+      social: "Friends and leagues",
+      refresh: "Refresh",
+      add_friend: "Add friend",
+      ghost_duel: "Ghost duel",
 
       // Utility links
       crashes: "anonymous crash reports",

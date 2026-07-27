@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=77" />
+  <link rel="stylesheet" href="css/style.css?v=78" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -108,6 +108,9 @@
           <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
           <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
           <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
+          <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
+          <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
+          <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
         </div>
       </div>
 
@@ -124,6 +127,18 @@
         </section>
         <p id="gift-next" class="menu-note quiet hidden" aria-live="polite"></p>
         <p id="shop-progress" class="menu-note shop-progress" aria-live="polite"></p>
+
+        <section class="data-tools progression-tools" aria-label="Развитие">
+          <p class="menu-section-label" data-i18n="progression">Развитие</p>
+          <p id="progression-points" class="menu-note quiet">очки глубины · 0</p>
+          <div id="skill-tree" class="skill-tree"></div>
+        </section>
+
+        <section class="data-tools story-tools" aria-label="История">
+          <p class="menu-section-label" data-i18n="story">История глубины</p>
+          <p id="story-chapter" class="menu-note"></p>
+          <p id="story-biome" class="menu-note quiet"></p>
+        </section>
 
         <section class="data-tools" aria-label="Перенос прогресса">
           <p class="menu-section-label" data-i18n="progress">Прогресс</p>
@@ -148,12 +163,24 @@
           <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
         </section>
 
+        <section class="data-tools social-tools" aria-label="Друзья и дуэли">
+          <p class="menu-section-label" data-i18n="social">Друзья и лиги</p>
+          <p id="social-profile" class="menu-note quiet">подключи облако для друзей</p>
+          <div class="data-tools-row">
+            <button id="btn-social-refresh" class="menu-link" type="button" data-i18n="refresh">Обновить</button>
+            <button id="btn-social-add" class="menu-link" type="button" data-i18n="add_friend">Добавить друга</button>
+            <button id="btn-social-duel" class="menu-link" type="button" data-i18n="ghost_duel">Дуэль призраков</button>
+          </div>
+          <div id="social-list" class="social-list" aria-live="polite"></div>
+        </section>
+
         <nav class="menu-foot" aria-label="Дополнительно">
           <button id="btn-donate" class="menu-link" type="button">
             <span class="btn-donate-main">Донат</span>
             <span class="btn-donate-sub">поддержать игру</span>
           </button>
           <a href="./landing.html" data-i18n="about">О игре</a>
+          <a href="./editor.html">Редактор контента</a>
           <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
           <a href="./support.html" data-i18n="support">Поддержка</a>
         </nav>
@@ -374,7 +401,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v77";
+      const stamp = "ottisk-force-v78";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -388,7 +415,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "77");
+      url.searchParams.set("v", "78");
       location.replace(url.toString());
     })();
   </script>
@@ -396,9 +423,12 @@
   <script src="js/backup.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/cloud.js"></script>
+  <script src="js/social.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/progression.js"></script>
   <script src="js/perf.js"></script>
   <script src="js/balance-tuner.js"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=77" type="module"></script>
+  <script src="js/game.js?v=78" type="module"></script>
 </body>
 </html>
