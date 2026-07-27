@@ -1,0 +1,89 @@
+# Cloud Mac build for Windows developers.
+# Docs: store/WINDOWS.md
+workflows:
+  ios-app-store:
+    name: iOS App Store
+    instance_type: mac_mini_m2
+    max_build_duration: 75
+    integrations:
+      app_store_connect: Ottisk
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.amelin.ottisk
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+        BUNDLE_ID: com.amelin.ottisk
+        APP_STORE_APPLE_ID: REPLACE_WITH_NUMERIC_APP_ID
+      node: v22.14.0
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm deps and web build
+        script: |
+          npm ci
+          npm run build:www
+          npx cap sync ios
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type ios_app_store \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      email:
+        recipients:
+          - amelin070411@icloud.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+
+  ios-test-unsigned:
+    name: iOS Compile Check
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      node: v22.14.0
+      xcode: latest
+      cocoapods: default
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+    scripts:
+      - name: Install and sync
+        script: |
+          npm ci
+          npm run build:www
+          npx cap sync ios
+          cd ios/App && pod install
+      - name: Compile without signing
+        script: |
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://nikitaamelin1.github.io/Ottisk/</loc>
+  </url>
+  <url>
+    <loc>https://nikitaamelin1.github.io/Ottisk/landing.html</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://nikitaamelin1.github.io/Ottisk/landing.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nikitaamelin1.github.io/Ottisk/landing.html" />
+  </url>
+  <url>
+    <loc>https://nikitaamelin1.github.io/Ottisk/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://nikitaamelin1.github.io/Ottisk/support.html</loc>
+  </url>
+</urlset>

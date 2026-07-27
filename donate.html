@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#081830" />
+  <title>ОТТИСК — Донат</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #081830;
+      --foam: #f3eee8;
+      --sand: #a89b90;
+      --mute: rgba(243, 238, 232, 0.62);
+      --line: rgba(243, 238, 232, 0.14);
+      --gold: #e6c07b;
+      --life: #6fd9b0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(120% 70% at 50% -10%, rgba(90, 180, 210, 0.24), transparent 55%),
+        linear-gradient(180deg, #123a58 0%, #0a243c 42%, #061422 100%);
+      color: var(--foam);
+      font-family: "Instrument Sans", sans-serif;
+      line-height: 1.55;
+      padding: calc(28px + env(safe-area-inset-top)) 22px calc(40px + env(safe-area-inset-bottom));
+    }
+    main { max-width: 28rem; margin: 0 auto; }
+    .brand {
+      font-family: Syne, sans-serif;
+      font-size: clamp(2.6rem, 12vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      line-height: 0.9;
+      margin: 0 0 0.5rem;
+    }
+    h1 {
+      font-family: Syne, sans-serif;
+      font-size: 1.15rem;
+      margin: 0 0 0.8rem;
+      color: var(--gold);
+      letter-spacing: -0.02em;
+    }
+    p { color: rgba(243, 238, 232, 0.86); font-size: 0.95rem; margin: 0 0 0.9rem; }
+    a { color: var(--gold); }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 1rem 0;
+      background: rgba(16, 40, 63, 0.72);
+    }
+    .card h2 {
+      font-family: Syne, sans-serif;
+      font-size: 1rem;
+      margin: 0 0 0.45rem;
+    }
+    .ok { color: var(--life); font-weight: 700; }
+    .tip {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+    .tip:first-of-type { border-top: 0; padding-top: 0; }
+    .tip strong { font-family: Syne, sans-serif; }
+    .price { color: var(--gold); font-family: Syne, sans-serif; font-weight: 800; white-space: nowrap; }
+    .muted { color: var(--mute); font-size: 0.88rem; }
+    .phone {
+      font-family: Syne, sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      margin: 0.35rem 0 0.75rem;
+      color: var(--foam);
+    }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 1.2rem; }
+    .btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: Syne, sans-serif;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .btn-primary {
+      background: color-mix(in srgb, var(--gold) 82%, #fff3d0);
+      color: #1a140c;
+    }
+    .btn-ghost {
+      border: 1px solid var(--line);
+      color: var(--foam);
+      background: transparent;
+    }
+    .copied { color: var(--life) !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">ОТТИСК</p>
+    <h1>Донат</h1>
+    <p>Игра бесплатная. Донат добровольный — он помогает развивать ОТТИСК.</p>
+
+    <div class="card">
+      <p class="ok" id="picked">Выбранный вариант</p>
+      <p class="muted" id="picked-sub">Любая сумма важна. Спасибо.</p>
+      <div class="tip">
+        <div>
+          <strong>Чаевые</strong>
+          <div class="muted">спасибо за след</div>
+        </div>
+        <div class="price">99 ₽</div>
+      </div>
+      <div class="tip">
+        <div>
+          <strong>Сильный след</strong>
+          <div class="muted">поддержка разработки</div>
+        </div>
+        <div class="price">249 ₽</div>
+      </div>
+      <div class="tip">
+        <div>
+          <strong>Глубина</strong>
+          <div class="muted">большой донат</div>
+        </div>
+        <div class="price">499 ₽</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Перевод по СБП</h2>
+      <p class="muted">В любом банке: перевод по номеру телефона → Сбер.</p>
+      <p class="phone" id="phone-display">+7 921 138-02-88</p>
+      <p class="muted" style="margin-top: -0.35rem;">Получатель: <strong style="color: var(--foam);">Никита</strong></p>
+      <button class="btn btn-primary" id="copy-phone" type="button">Скопировать номер</button>
+      <p class="muted" id="copy-status" style="margin: 0.7rem 0 0;"></p>
+      <p class="muted" style="margin-top: 0.9rem;">В банке сверь имя. Комментарий можно не писать — или укажи «ОТТИСК».</p>
+    </div>
+
+    <div class="card">
+      <h2>Вопросы</h2>
+      <p><a id="mail" href="mailto:amelin070411@icloud.com?subject=ОТТИСК%20донат">amelin070411@icloud.com</a></p>
+      <p class="muted">В приложении App Store донат идёт через покупку внутри игры, следы начисляются сразу.</p>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-ghost" href="./index.html">Вернуться в игру</a>
+    </div>
+  </main>
+  <script>
+    const PHONE_DISPLAY = "+7 921 138-02-88";
+    const PHONE_COPY = "89211380288";
+
+    const tips = {
+      tip_small: { title: "Чаевые · 99 ₽", sub: "Переведи 99 ₽ по СБП на номер ниже." },
+      tip_mid: { title: "Сильный след · 249 ₽", sub: "Переведи 249 ₽ по СБП на номер ниже." },
+      tip_big: { title: "Глубина · 499 ₽", sub: "Переведи 499 ₽ по СБП на номер ниже." },
+      marks: { title: "Пак следов", sub: "Покупка следов доступна в версии App Store. На сайте можно поддержать донатом." },
+      continue: { title: "Продолжение · 10 ₽", sub: "Переведи 10 ₽ по СБП — продолжение после смерти в App Store." },
+      starter: { title: "Стартовый пак · 199 ₽", sub: "Скат + удильщик + наутилус и +60 следов. App Store / донат 199 ₽." },
+      submarine: { title: "Субмарина · 99 ₽", sub: "Пушки и 3 жизни корпуса. App Store / донат 99 ₽." },
+      eel: { title: "Угорь · 99 ₽", sub: "Цепная молния убивает хищников. App Store / донат 99 ₽." },
+      squid: { title: "Кальмар · 99 ₽", sub: "Слепящий чернильный туман с перезарядкой. App Store / донат 99 ₽." },
+      seahorse: { title: "Конёк · 129 ₽", sub: "Откат во времени, восстанавливается за свет. App Store / донат 129 ₽." },
+      whale: { title: "Кит · 149 ₽", sub: "Двойной оглушающий сонар. App Store / донат 149 ₽." },
+    };
+    const params = new URLSearchParams(location.search);
+    const tip = tips[params.get("tip")] || null;
+    if (tip) {
+      document.getElementById("picked").textContent = tip.title;
+      document.getElementById("picked-sub").textContent = tip.sub;
+      const subject = encodeURIComponent(`ОТТИСК донат · ${tip.title}`);
+      document.getElementById("mail").href = `mailto:amelin070411@icloud.com?subject=${subject}`;
+    }
+
+    const status = document.getElementById("copy-status");
+    const btn = document.getElementById("copy-phone");
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(PHONE_COPY);
+        status.textContent = "Номер скопирован: " + PHONE_DISPLAY;
+        status.classList.add("copied");
+        btn.textContent = "Скопировано";
+        setTimeout(() => {
+          btn.textContent = "Скопировать номер";
+        }, 1600);
+      } catch {
+        status.textContent = "Скопируй вручную: " + PHONE_COPY;
+        status.classList.remove("copied");
+      }
+    });
+  </script>
+</body>
+</html>

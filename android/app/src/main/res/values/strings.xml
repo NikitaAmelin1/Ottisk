@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ОТТИСК</string>
+    <string name="title_activity_main">ОТТИСК</string>
+    <string name="package_name">com.amelin.ottisk</string>
+    <string name="custom_url_scheme">com.amelin.ottisk</string>
+</resources>
