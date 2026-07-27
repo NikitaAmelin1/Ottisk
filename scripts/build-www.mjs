@@ -9,6 +9,8 @@ const assets = [
   "support.html",
   "donate.html",
   "landing.html",
+  "editor.html",
+  "content",
   "ottisk-ad-ru-15s.mp4",
   "robots.txt",
   "sitemap.xml",
@@ -42,7 +44,7 @@ if (existsSync(indexPath)) {
   let html = readFileSync(indexPath, "utf8");
   html = html.replace(
     /<script src="js\/game\.js\?v=[^"]+" type="module"><\/script>/,
-    `<script src="js/native.js" type="module"></script>\n  <script src="js/game.js?v=hero1" type="module"></script>`
+    `<script src="js/game.js?v=78" type="module"></script>`
   );
   writeFileSync(indexPath, html);
 }

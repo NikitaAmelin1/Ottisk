@@ -723,6 +723,58 @@ body {
   color: var(--gold);
 }
 
+.skill-tree {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.skill-node {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--foam);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  text-align: left;
+}
+
+.skill-node:disabled {
+  opacity: 0.48;
+}
+
+.skill-node-name {
+  font-weight: 700;
+}
+
+.skill-node-rank {
+  color: var(--gold);
+}
+
+.skill-node-desc {
+  grid-column: 1 / -1;
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.social-list {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.social-entry {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
 .menu-section-label {
   margin: 0 0 8px;
   font-size: 11px;
@@ -2007,18 +2059,66 @@ body {
   color: var(--life);
 }
 
-.toast {
+.coach {
   min-height: 20px;
+  max-width: 22ch;
   font-size: 12px;
-  color: var(--gold);
-  max-width: 28ch;
+  letter-spacing: 0.04em;
+  color: var(--foam);
 }
 
-.coach {
-  min-height: 22px;
+.toast {
+  min-height: 18px;
+  font-size: 11px;
+  color: var(--gold);
   max-width: 26ch;
-  font-size: 14px;
+}
+
+.install-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 8px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
   color: var(--foam);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.install-tip-btn.hidden { display: none; }
+
+.cloud-api-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.cloud-api-input {
+  width: 100%;
+  border: 1px solid rgba(243, 238, 232, 0.16);
+  border-radius: 10px;
+  background: rgba(4, 16, 28, 0.55);
+  color: var(--foam);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.over-actions-focused {
+  gap: 8px;
+}
+
+.over-actions-focused .over-secondary {
+  opacity: 0.85;
+}
+
+.death-offer {
+  width: 100%;
 }
 
 .combo.show,
@@ -2204,6 +2304,38 @@ body {
   width: min(100%, 340px);
 }
 
+#screen-over.screen-over {
+  justify-content: flex-end;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+
+#screen-over .over-card {
+  margin: 0;
+  max-height: min(100%, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 48px));
+  width: min(100%, 360px);
+  overflow: hidden;
+  gap: 0;
+}
+
+#screen-over .over-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+}
+
+#screen-over .over-actions {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--foam) 14%, transparent);
+  background: color-mix(in srgb, var(--bg0) 88%, transparent);
+}
+
 .over-label {
   font-size: 11px;
   letter-spacing: 0.18em;
@@ -2276,4 +2408,247 @@ body {
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* —— Accessibility preferences —— */
+:where(
+  button,
+  [href],
+  input,
+  select,
+  textarea,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--bg0);
+}
+
+#app.colorblind-protanopia,
+#app[data-colorblind="protanopia"] {
+  --ember: #3db7e9;
+  --gold: #ffd166;
+  --life: #68d8c5;
+  --danger: #a78bfa;
+  --accent-a: #3db7e9;
+  --accent-b: #ffd166;
+}
+
+#app.colorblind-deuteranopia,
+#app[data-colorblind="deuteranopia"] {
+  --ember: #56b4e9;
+  --gold: #f0e442;
+  --life: #7dd3fc;
+  --danger: #cc79a7;
+  --accent-a: #56b4e9;
+  --accent-b: #f0e442;
+}
+
+#app.colorblind-tritanopia,
+#app[data-colorblind="tritanopia"] {
+  --ember: #ff7f7f;
+  --gold: #f4b6d2;
+  --life: #54d6c7;
+  --danger: #e84a5f;
+  --accent-a: #ff7f7f;
+  --accent-b: #54d6c7;
+}
+
+#app:is(
+  .colorblind-protanopia,
+  .colorblind-deuteranopia,
+  .colorblind-tritanopia,
+  [data-colorblind="protanopia"],
+  [data-colorblind="deuteranopia"],
+  [data-colorblind="tritanopia"]
+) .heat i {
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 5px, rgba(0, 0, 0, 0.24) 5px 8px),
+    linear-gradient(90deg, var(--life), var(--gold), var(--danger));
+}
+
+#app:is(
+  .colorblind-protanopia,
+  .colorblind-deuteranopia,
+  .colorblind-tritanopia,
+  [data-colorblind="protanopia"],
+  [data-colorblind="deuteranopia"],
+  [data-colorblind="tritanopia"]
+) .heat.critical i {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 7px, rgba(255, 255, 255, 0.38) 7px 10px),
+    linear-gradient(90deg, var(--danger), var(--gold));
+}
+
+#app.large-ui {
+  font-size: 118%;
+}
+
+#app.large-ui :is(.menu-toggle, .menu-link, .set-pill, .meta-label, .meta-next) {
+  font-size: max(12px, 0.75rem);
+}
+
+#app.large-ui :is(button, .btn, .control-chip, .gift-tile, .hero-tile) {
+  min-height: 52px;
+}
+
+#app.large-ui :is(.menu-main, .menu-more, .flow-shell, .over-card) {
+  width: min(100%, 440px);
+}
+
+#app.large-ui .screen {
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+#app.one-hand .menu-main,
+#app.one-hand .menu-more,
+#app.one-hand .flow-shell,
+#app.one-hand .over-card,
+#app.one-hand-right .menu-main,
+#app.one-hand-right .menu-more,
+#app.one-hand-right .flow-shell,
+#app.one-hand-right .over-card {
+  margin-left: auto;
+  margin-right: 0;
+  align-items: flex-end;
+  text-align: right;
+}
+
+#app.one-hand-left .menu-main,
+#app.one-hand-left .menu-more,
+#app.one-hand-left .flow-shell,
+#app.one-hand-left .over-card {
+  margin-left: 0;
+  margin-right: auto;
+  align-items: flex-start;
+  text-align: left;
+}
+
+#app:is(.one-hand, .one-hand-right, .one-hand-left) :is(
+  .menu-play,
+  .control-row,
+  .mode-row,
+  .run-mode-row,
+  .access-row,
+  .data-tools,
+  .menu-trophies,
+  .actions,
+  .over-actions
+) {
+  width: min(88%, 340px);
+}
+
+#app:is(.one-hand, .one-hand-right) .status.hud {
+  padding-left: max(24%, 72px);
+}
+
+#app.one-hand-left .status.hud {
+  padding-right: max(24%, 72px);
+}
+
+#app.reduce-transparency .screen-bg,
+#app.reduced-transparency .screen-bg,
+#app.reduce-transparency .menu-veil,
+#app.reduced-transparency .menu-veil {
+  background: var(--bg0);
+  backdrop-filter: none;
+}
+
+#app.reduce-transparency :is(.status.hud, .mechanic-card, .draw-card, .shop-item, .donate-tip),
+#app.reduced-transparency :is(.status.hud, .mechanic-card, .draw-card, .shop-item, .donate-tip) {
+  background: var(--panel);
+  backdrop-filter: none;
+}
+
+#app.reduce-transparency :is(.menu-veil-light, .menu-veil-depth, .aura),
+#app.reduced-transparency :is(.menu-veil-light, .menu-veil-depth, .aura) {
+  display: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #app .screen-bg,
+  #app .menu-veil {
+    background: var(--bg0);
+    backdrop-filter: none;
+  }
+
+  #app :is(.status.hud, .mechanic-card, .draw-card, .shop-item, .donate-tip) {
+    background: var(--panel);
+    backdrop-filter: none;
+  }
+
+  #app :is(.menu-veil-light, .menu-veil-depth, .aura) {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  #app {
+    --line: rgba(255, 255, 255, 0.7);
+  }
+
+  #app :is(.btn, .menu-toggle, .control-chip, .shop-item, .hero-tile) {
+    border-color: currentColor;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --bg0: Canvas;
+    --foam: CanvasText;
+    --sand: CanvasText;
+    --gold: Highlight;
+    --life: LinkText;
+    --danger: Mark;
+    --line: CanvasText;
+  }
+
+  #app,
+  .screen,
+  .screen-bg,
+  .menu-veil,
+  .status.hud,
+  .mechanic-card,
+  .draw-card {
+    background: Canvas;
+    color: CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  .brand {
+    color: CanvasText;
+    background: none;
+    -webkit-text-fill-color: CanvasText;
+  }
+
+  :is(.btn, button, [href], .shop-item, .hero-tile) {
+    border: 1px solid ButtonText;
+  }
+
+  :is(.on, [aria-pressed="true"], [aria-selected="true"]) {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  :where(
+    button,
+    [href],
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+    outline: 3px solid Highlight;
+    box-shadow: none;
+  }
+
+  .heat,
+  .progress-bar,
+  .hold-meter,
+  .mut-track,
+  .dive-meter {
+    border: 1px solid CanvasText;
+    forced-color-adjust: none;
+  }
 }

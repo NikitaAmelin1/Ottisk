@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "biomes": [
+    {
+      "id": "sunlit-reef",
+      "name": "Светлый риф",
+      "description": "Тёплое мелководье, где след впервые обретает форму.",
+      "palette": { "background": "#123b5d", "accent": "#7affd4", "hazard": "#ffbd66" },
+      "depth": [0, 180],
+      "ambience": "reef"
+    },
+    {
+      "id": "kelp-cathedral",
+      "name": "Собор водорослей",
+      "description": "Тесные зелёные проходы скрывают быстрых охотников.",
+      "palette": { "background": "#092f35", "accent": "#6edc8c", "hazard": "#ff7b72" },
+      "depth": [180, 520],
+      "ambience": "kelp"
+    },
+    {
+      "id": "midnight-trench",
+      "name": "Полуночный разлом",
+      "description": "Бездна отвечает на свет древним эхом.",
+      "palette": { "background": "#050b21", "accent": "#a48cff", "hazard": "#ff4f75" },
+      "depth": [520, 1200],
+      "ambience": "trench"
+    },
+    {
+      "id": "glass-shoals",
+      "name": "Стеклянные отмели",
+      "description": "Зеркальная вода отражает чужие следы и путает путь.",
+      "palette": { "background": "#0a2a40", "accent": "#9be7ff", "hazard": "#ff9ad4" },
+      "depth": [120, 360],
+      "ambience": "reef"
+    },
+    {
+      "id": "ember-vents",
+      "name": "Тлеющие жерла",
+      "description": "Тёплые выбросы несут угольки света и жёстких крабов.",
+      "palette": { "background": "#1a1420", "accent": "#ff9a62", "hazard": "#ff5a4a" },
+      "depth": [300, 780],
+      "ambience": "trench"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "first-imprint",
+      "name": "Первый отпечаток",
+      "order": 1,
+      "biomeIds": ["sunlit-reef"],
+      "synopsis": "Существо учится держаться за свет и оставлять след.",
+      "unlock": { "score": 0 }
+    },
+    {
+      "id": "green-choir",
+      "name": "Зелёный хор",
+      "order": 2,
+      "biomeIds": ["kelp-cathedral", "glass-shoals"],
+      "synopsis": "След проходит сквозь живой лабиринт и слышит чужой зов.",
+      "unlock": { "score": 240, "chapterId": "first-imprint" }
+    },
+    {
+      "id": "voice-below",
+      "name": "Голос снизу",
+      "order": 3,
+      "biomeIds": ["midnight-trench", "ember-vents"],
+      "synopsis": "В глубине выясняется, кто оставил первый свет.",
+      "unlock": { "score": 650, "chapterId": "green-choir" }
+    }
+  ],
+  "enemies": [
+    {
+      "id": "dartfish",
+      "name": "Игла",
+      "archetype": "chaser",
+      "health": 1,
+      "speed": 1.25,
+      "damage": 18,
+      "behavior": { "tracking": 0.55, "telegraphMs": 500 },
+      "tags": ["swarm", "mobile"]
+    },
+    {
+      "id": "lantern-jelly",
+      "name": "Ложный фонарь",
+      "archetype": "zoning",
+      "health": 2,
+      "speed": 0.55,
+      "damage": 24,
+      "behavior": { "tracking": 0.15, "telegraphMs": 900 },
+      "tags": ["pulse", "hazard"]
+    },
+    {
+      "id": "trench-maw",
+      "name": "Пасть разлома",
+      "archetype": "boss",
+      "health": 24,
+      "speed": 0.7,
+      "damage": 40,
+      "behavior": { "tracking": 0.8, "telegraphMs": 1300 },
+      "tags": ["boss", "armored"]
+    },
+    {
+      "id": "vent-crab",
+      "name": "Краб жерла",
+      "archetype": "chaser",
+      "health": 2,
+      "speed": 0.7,
+      "damage": 22,
+      "behavior": { "tracking": 0.4, "telegraphMs": 700 },
+      "tags": ["armored", "sideways"]
+    },
+    {
+      "id": "glass-urchin",
+      "name": "Стеклянный ёж",
+      "archetype": "zoning",
+      "health": 3,
+      "speed": 0.35,
+      "damage": 28,
+      "behavior": { "tracking": 0.1, "telegraphMs": 1100 },
+      "tags": ["pulse", "hazard", "spiny"]
+    },
+    {
+      "id": "mirror-fish",
+      "name": "Рыба-отражение",
+      "archetype": "chaser",
+      "health": 1,
+      "speed": 1.1,
+      "damage": 16,
+      "behavior": { "tracking": 0.65, "telegraphMs": 450 },
+      "tags": ["swarm", "mirror"]
+    }
+  ],
+  "waves": [
+    {
+      "id": "reef-awakening",
+      "name": "Пробуждение рифа",
+      "biomeId": "sunlit-reef",
+      "duration": 30,
+      "spawns": [{ "enemyId": "dartfish", "count": 5, "interval": 2.8, "start": 3 }],
+      "eventIds": ["warm-current"],
+      "reward": { "light": 30, "points": 1 }
+    },
+    {
+      "id": "kelp-ambush",
+      "name": "Засада в хоре",
+      "biomeId": "kelp-cathedral",
+      "duration": 45,
+      "spawns": [
+        { "enemyId": "dartfish", "count": 8, "interval": 2.1, "start": 2 },
+        { "enemyId": "lantern-jelly", "count": 3, "interval": 9, "start": 8 }
+      ],
+      "eventIds": ["tangled-path", "light-bloom"],
+      "reward": { "light": 55, "points": 1 }
+    },
+    {
+      "id": "glass-chase",
+      "name": "Погоня в отмелях",
+      "biomeId": "glass-shoals",
+      "duration": 40,
+      "spawns": [
+        { "enemyId": "mirror-fish", "count": 6, "interval": 2.4, "start": 2 },
+        { "enemyId": "glass-urchin", "count": 2, "interval": 12, "start": 10 }
+      ],
+      "eventIds": ["mirror-tide", "light-bloom"],
+      "reward": { "light": 70, "points": 1 }
+    },
+    {
+      "id": "ember-crawl",
+      "name": "Ползучий жар",
+      "biomeId": "ember-vents",
+      "duration": 50,
+      "spawns": [
+        { "enemyId": "vent-crab", "count": 5, "interval": 3.2, "start": 4 },
+        { "enemyId": "lantern-jelly", "count": 2, "interval": 11, "start": 12 }
+      ],
+      "eventIds": ["ember-rain", "warm-current"],
+      "reward": { "light": 90, "points": 2 }
+    },
+    {
+      "id": "maw-of-midnight",
+      "name": "Пасть полуночи",
+      "biomeId": "midnight-trench",
+      "duration": 70,
+      "spawns": [
+        { "enemyId": "lantern-jelly", "count": 4, "interval": 10, "start": 3 },
+        { "enemyId": "trench-maw", "count": 1, "interval": 1, "start": 15 }
+      ],
+      "eventIds": ["blackout", "light-bloom"],
+      "reward": { "light": 120, "points": 2 }
+    }
+  ],
+  "events": [
+    {
+      "id": "warm-current",
+      "name": "Тёплое течение",
+      "kind": "modifier",
+      "weight": 5,
+      "duration": 10,
+      "effects": { "speedMultiplier": 1.15 }
+    },
+    {
+      "id": "tangled-path",
+      "name": "Сплетение",
+      "kind": "hazard",
+      "weight": 3,
+      "duration": 12,
+      "effects": { "speedMultiplier": 0.8, "enemyRateMultiplier": 1.2 }
+    },
+    {
+      "id": "light-bloom",
+      "name": "Цветение света",
+      "kind": "reward",
+      "weight": 2,
+      "duration": 8,
+      "effects": { "lightMultiplier": 1.5 }
+    },
+    {
+      "id": "blackout",
+      "name": "Гашение",
+      "kind": "hazard",
+      "weight": 2,
+      "duration": 9,
+      "effects": { "visibilityMultiplier": 0.45, "enemyRateMultiplier": 1.3 }
+    },
+    {
+      "id": "mirror-tide",
+      "name": "Зеркальный прилив",
+      "kind": "modifier",
+      "weight": 3,
+      "duration": 11,
+      "effects": { "speedMultiplier": 1.08, "enemyRateMultiplier": 1.15 }
+    },
+    {
+      "id": "ember-rain",
+      "name": "Дождь углей",
+      "kind": "reward",
+      "weight": 2,
+      "duration": 9,
+      "effects": { "lightMultiplier": 1.35, "speedMultiplier": 1.05 }
+    }
+  ]
+}

@@ -477,7 +477,7 @@ const WAVES = [
   },
 ];
 
-const MIX_SPECIES = ["fish", "dart", "jelly", "eel", "shark", "ray", "ghost"];
+const MIX_SPECIES = ["fish", "dart", "jelly", "eel", "shark", "ray", "ghost", "crab", "urchin", "mirror"];
 
 const customHeroImage = { img: null, src: "", ready: false };
 
@@ -554,13 +554,19 @@ const onboardLabelEl = document.getElementById("onboard-label");
 const onboardSubEl = document.getElementById("onboard-sub");
 const shareCanvasEl = document.getElementById("share-canvas");
 
-const RUN_EVENTS = [
+const BASE_RUN_EVENTS = [
   { id: "rain", title: "ливень света", dur: 4.2 },
   { id: "raid", title: "облава", dur: 3.2 },
   { id: "calm", title: "тишина", dur: 5.0 },
   { id: "comet", title: "комета", dur: 0.8 },
   { id: "sanctuary", title: "светлый сад", dur: 5.2 },
   { id: "blackout", title: "затмение", dur: 4.4 },
+];
+const RUN_EVENTS = [
+  ...BASE_RUN_EVENTS,
+  ...(window.OttiskContent?.DEFAULT_CATALOG?.events || [])
+    .filter((event) => !BASE_RUN_EVENTS.some((base) => base.id === event.id))
+    .map((event) => ({ id: event.id, title: event.name.toLowerCase(), dur: Math.min(12, event.duration) })),
 ];
 
 const DAILY_DEFS = [
@@ -749,6 +755,11 @@ const state = {
   runMode: "normal",
   qualityTier: "high",
   tuning: { hunterSpeed: 1, hungerDrain: 1, sparkInterval: 1 },
+  progressionEffects: {},
+  maxHunger: 100,
+  progressionRevives: 0,
+  replaySamples: [],
+  replaySampleAcc: 0,
   tipFlags: {
     move: false,
     hunter: false,
@@ -881,6 +892,26 @@ function mixColor(a, b, t) {
   const out = `rgb(${(aa[0] + (bb[0] - aa[0]) * u + 0.5) | 0},${(aa[1] + (bb[1] - aa[1]) * u + 0.5) | 0},${(aa[2] + (bb[2] - aa[2]) * u + 0.5) | 0})`;
   mixCache.set(key, out);
   return out;
+}
+
+
+let OttiskArt = null;
+function bindOttiskArt() {
+  if (OttiskArt || typeof globalThis.OttiskArtFactory !== "function") return;
+  OttiskArt = globalThis.OttiskArtFactory({
+    mixColor,
+    cssVar,
+    clamp,
+    rand,
+    lifeInkColor: () => lifeInkColor(),
+  });
+}
+function artDraw(name, ...args) {
+  bindOttiskArt();
+  if (!OttiskArt || typeof OttiskArt[name] !== "function") return false;
+  OttiskArt.use(ctx);
+  OttiskArt[name](...args);
+  return true;
 }
 
 function invalidateBgCache() {
@@ -1185,7 +1216,7 @@ function updateHum(dt = 0.016) {
   humAcc += dt;
   if (humAcc < 0.07) return;
   humAcc = 0;
-  const urgency = 1 - state.hunger / 100;
+  const urgency = 1 - state.hunger / Math.max(1, state.maxHunger || 100);
   let hunterBoost = 0;
   for (const h of state.hunters) {
     const d2 = dist2(h.x, h.y, state.life.x, state.life.y);
@@ -1845,6 +1876,19 @@ function playPredatorSfx(species, kind = "call") {
     else sfxGhostCall();
     return;
   }
+  if (species === "crab") {
+    playOsc({ freq: 140, endFreq: 90, type: "triangle", gain: 0.02, dur: 0.09, filterFreq: 600 });
+    playNoise({ gain: 0.014, dur: 0.07, filterFreq: 500, endFilter: 180, filterType: "bandpass", filterQ: 1.4 });
+    return;
+  }
+  if (species === "urchin") {
+    playOsc({ freq: 520, endFreq: 260, type: "sine", gain: 0.016, dur: 0.12 });
+    return;
+  }
+  if (species === "mirror") {
+    playOsc({ freq: 880, endFreq: 1320, type: "triangle", gain: 0.015, dur: 0.08, filterFreq: 3200 });
+    return;
+  }
   if (species === "boss") {
     if (kind === "charge") sfxBossCharge();
     else if (kind === "warn") sfxBossWarn();
@@ -1904,6 +1948,8 @@ function playSparkTone(type) {
   else if (type === "comet") sfxCometEat();
   else if (type === "deep") sfxDeepEat();
   else if (type === "seed") sfxSeedEat();
+  else if (type === "ember") sfxCometEat();
+  else if (type === "mirror") sfxCoolEat();
   else sfxPlanktonEat(state.combo || 0);
 }
 
@@ -1947,6 +1993,15 @@ function startRunEvent(def) {
   } else if (def.id === "blackout") {
     state.flash = Math.max(state.flash, 0.22);
     spawnHunter(false);
+  } else if (def.id === "light-bloom") {
+    for (let i = 0; i < 5; i += 1) spawnSpark({ edge: true, type: i === 0 ? "rare" : null });
+  } else if (def.id === "tangled-path") {
+    spawnHunter(false);
+  } else if (def.id === "mirror-tide") {
+    spawnHunter(false);
+    spawnSpark({ edge: true, type: "mirror" });
+  } else if (def.id === "ember-rain") {
+    for (let i = 0; i < 4; i += 1) spawnSpark({ edge: true, type: i === 0 ? "ember" : null });
   }
 }
 
@@ -2094,7 +2149,7 @@ function updateGlyphs(dt) {
     state.glyphs.splice(i, 1);
     state.glyphIndex += 1;
     state.stats.glyphsTaken += 1;
-    state.hunger = clamp(state.hunger + 12, 0, 100);
+    state.hunger = clamp(state.hunger + 12, 0, state.maxHunger || 100);
     updateHungerUi();
     floatText(g.x, g.y - 10, g.ch, cssVar("--foam", "#f3eee8"), 20);
     sfxUiTap(state.glyphIndex);
@@ -2241,6 +2296,15 @@ function midgamePace() {
   // Easy stays gentler late; hard keeps more pressure.
   if (playerDifficulty().id === "easy") pace *= 0.94;
   if (playerDifficulty().id === "hard") pace = Math.min(1, pace + 0.06);
+  // Live balance tuner softens/hardens the mid-run spike from analytics.
+  const tuned = Number(state.tuning?.hunterSpeed);
+  if (Number.isFinite(tuned) && tuned > 0) {
+    pace *= clamp(0.86 + (tuned - 1) * 0.45, 0.78, 1.06);
+  }
+  const hungerTune = Number(state.tuning?.hungerDrain);
+  if (Number.isFinite(hungerTune) && hungerTune > 1.02) {
+    pace = Math.min(1, pace + 0.03);
+  }
   return pace;
 }
 
@@ -2320,7 +2384,7 @@ function applySpeciesToHunter(hunter, species) {
   const kind = rollHunterSpecies(species);
   hunter.species = kind;
   hunter.boss = kind === "boss";
-  hunter.dashCd = kind === "dart" ? rand(0.4, 1.1) : kind === "shark" ? rand(2.2, 3.4) : kind === "ghost" ? rand(1.4, 2.4) : kind === "boss" ? rand(1.6, 2.4) : 0;
+  hunter.dashCd = kind === "dart" || kind === "mirror" ? rand(0.4, 1.1) : kind === "shark" ? rand(2.2, 3.4) : kind === "ghost" ? rand(1.4, 2.4) : kind === "crab" ? rand(1.8, 2.8) : kind === "boss" ? rand(1.6, 2.4) : 0;
   hunter.dashT = 0;
   hunter.pulse = Math.random() * Math.PI * 2;
   hunter.weave = Math.random() * Math.PI * 2;
@@ -2331,12 +2395,17 @@ function applySpeciesToHunter(hunter, species) {
   else if (kind === "shark") hunter.r = rand(16, 20);
   else if (kind === "ray") hunter.r = rand(18, 23);
   else if (kind === "ghost") hunter.r = rand(13, 17);
+  else if (kind === "crab") hunter.r = rand(15, 19);
+  else if (kind === "urchin") hunter.r = rand(16, 21);
+  else if (kind === "mirror") hunter.r = rand(12, 15);
   else if (kind === "boss") {
     hunter.r = 40;
     hunter.bossPhase = "orbit";
     hunter.bossTimer = 2.1;
     hunter.anger = Math.max(hunter.anger || 1, 1.05);
   } else hunter.r = rand(15, 19);
+  if (kind === "crab") hunter.dashCd = rand(1.8, 2.8);
+  if (kind === "mirror") hunter.dashCd = rand(0.9, 1.6);
 }
 
 function spawnBoss() {
@@ -2396,7 +2465,8 @@ function grantBossClear(id) {
   if (!state.running || !state.meta) return;
   const kind = String(id).includes("kraken") ? "kraken" : String(id).includes("leviathan") ? "leviathan" : "";
   if (!kind) return;
-  const reward = kind === "kraken" ? 25 : 12;
+  const baseReward = kind === "kraken" ? 25 : 12;
+  const reward = Math.max(1, Math.round(baseReward * (state.progressionEffects?.waveRewardMultiplier || 1)));
   state.meta.bossClears = state.meta.bossClears || { leviathan: 0, kraken: 0 };
   state.meta.bossClears[kind] = (state.meta.bossClears[kind] || 0) + 1;
   awardMarks(reward, {
@@ -2462,7 +2532,7 @@ function syncWave(announce = true) {
   return wave;
 }
 
-function floatText(x, y, text, color = "#f2c15a", size = 16) {
+function floatText(x, y, text, color = "#f2c15a", size = 13) {
   if (state.floaters.length >= MAX_FLOATERS) {
     state.floaters[0] = state.floaters[state.floaters.length - 1];
     state.floaters.pop();
@@ -2758,6 +2828,15 @@ function weekKey(date = new Date()) {
   return `${tmp.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+function normalizeProgression(value) {
+  const api = window.OttiskProgression;
+  if (!api) return value && typeof value === "object" ? value : null;
+  try {
+    if (api.validateState(value).valid) return api.deserialize(value);
+  } catch (_) {}
+  return api.createState();
+}
+
 function loadMeta() {
   let raw = null;
   try {
@@ -2800,6 +2879,11 @@ function loadMeta() {
       ? raw.reduceMotion
       : !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches,
     highContrast: !!raw?.highContrast,
+    largeUi: !!raw?.largeUi,
+    oneHand: ["off", "left", "right"].includes(raw?.oneHand) ? raw.oneHand : "off",
+    colorblind: ["off", "protanopia", "deuteranopia", "tritanopia"].includes(raw?.colorblind) ? raw.colorblind : "off",
+    progression: normalizeProgression(raw?.progression),
+    seenChapters: Array.isArray(raw?.seenChapters) ? raw.seenChapters.filter((id) => typeof id === "string") : [],
     // Returning players skip onboarding even if the flag was added later.
     onboarded: !!raw?.onboarded || best > 0 || marks > 0 || Math.max(0, Number(raw?.runs || 0)) > 0,
     starterGift: !!raw?.starterGift || best > 0 || marks > 0,
@@ -2874,6 +2958,13 @@ function loadMeta() {
       ? raw.ghostPath.filter((p) => p && typeof p.x === "number" && typeof p.y === "number").slice(0, GHOST_MAX_POINTS)
       : [],
     ghostScore: Math.max(0, Number(raw?.ghostScore || 0)),
+    lastReplay: raw?.lastReplay && Array.isArray(raw.lastReplay.samples)
+      ? {
+          score: Math.max(0, Number(raw.lastReplay.score || 0)),
+          durationMs: Math.max(250, Number(raw.lastReplay.durationMs || 250)),
+          samples: raw.lastReplay.samples.filter((sample) => Array.isArray(sample) && sample.length === 3).slice(0, 96),
+        }
+      : null,
     seasonalUnlocks: Array.isArray(raw?.seasonalUnlocks)
       ? raw.seasonalUnlocks.filter((id) => typeof id === "string")
       : [],
@@ -2882,6 +2973,7 @@ function loadMeta() {
       : [],
     coopEnabled: !!raw?.coopEnabled,
     dailyModeEnabled: !!raw?.dailyModeEnabled,
+    ghostRaceEnabled: raw?.ghostRaceEnabled !== false,
     bossClears: {
       leviathan: Math.max(0, Number(raw?.bossClears?.leviathan || 0)),
       kraken: Math.max(0, Number(raw?.bossClears?.kraken || 0)),
@@ -3440,7 +3532,7 @@ function trySeahorseRewind(hunter) {
   state.life.y = past.y;
   clampLife();
   state.lifeHistory = [];
-  state.hunger = clamp(state.hunger + 18, 0, 100);
+  state.hunger = clamp(state.hunger + 18, 0, state.maxHunger || 100);
   updateHungerUi();
   buzz([14, 22, 14]);
   sfxHeroAbility("seahorse");
@@ -3897,6 +3989,8 @@ function renderDaily() {
   renderDailyQuest();
   renderWeekly();
   renderSettings();
+  renderProgression();
+  renderStory();
   renderGifts();
 }
 
@@ -4026,10 +4120,130 @@ function renderWeekly() {
   weeklyCardEl.textContent = `неделя · ${quest.title} · ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
 }
 
+function progressionState() {
+  const api = window.OttiskProgression;
+  if (!api) return null;
+  if (!state.meta?.progression || !api.validateState(state.meta.progression).valid) {
+    state.meta.progression = api.createState();
+  }
+  return state.meta.progression;
+}
+
+function renderProgression() {
+  const api = window.OttiskProgression;
+  const progress = progressionState();
+  const points = document.getElementById("progression-points");
+  const tree = document.getElementById("skill-tree");
+  if (!api || !progress || !tree) return;
+  if (points) points.textContent = `${window.OttiskI18n?.locale === "en" ? "depth points" : "очки глубины"} · ${progress.available}`;
+  tree.textContent = "";
+  const english = window.OttiskI18n?.locale === "en";
+  const names = {
+    "steady-touch": ["Steady trail", "Increase maximum fullness by 8 per rank."],
+    "bright-core": ["Bright core", "Collected light is worth 10% more per rank."],
+    "quick-current": ["Quick current", "Movement speed grows by 5% per rank."],
+    "second-pulse": ["Second pulse", "Prevent defeat once per run."],
+    "deep-memory": ["Memory of the deep", "Boss rewards grow by 20%."],
+  };
+  for (const skill of api.SKILL_TREE) {
+    const rank = progress.spent[skill.id] || 0;
+    const eligibility = api.canSpend(progress, skill.id);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "skill-node";
+    button.disabled = !eligibility.ok;
+    const title = english ? names[skill.id]?.[0] || skill.name : skill.name;
+    const description = english ? names[skill.id]?.[1] || skill.description : skill.description;
+    const name = document.createElement("span");
+    name.className = "skill-node-name";
+    name.textContent = title;
+    const rankEl = document.createElement("span");
+    rankEl.className = "skill-node-rank";
+    rankEl.textContent = `${rank}/${skill.maxRank} · ${skill.cost}`;
+    const desc = document.createElement("span");
+    desc.className = "skill-node-desc";
+    desc.textContent = description;
+    button.append(name, rankEl, desc);
+    button.addEventListener("click", () => {
+      const result = api.spend(state.meta.progression, skill.id);
+      if (!result.ok) return;
+      state.meta.progression = result.state;
+      state.progressionEffects = api.effects(result.state);
+      saveMeta();
+      renderProgression();
+      showToast(`${title} · ${result.state.spent[skill.id]}`);
+    });
+    tree.appendChild(button);
+  }
+}
+
+function earnProgressionFromBest() {
+  const api = window.OttiskProgression;
+  const progress = progressionState();
+  if (!api || !progress) return;
+  const target = Math.min(20, Math.floor((state.meta.best || 0) / 100));
+  if (target <= progress.totalEarned) return;
+  const earned = target - progress.totalEarned;
+  state.meta.progression = api.earn(progress, earned);
+  saveMeta();
+  renderProgression();
+  showToast(`${window.OttiskI18n?.locale === "en" ? "depth point" : "очко глубины"} · +${earned}`);
+}
+
+function contentBiome(score = state.score) {
+  const biomes = window.OttiskContent?.DEFAULT_CATALOG?.biomes || [];
+  return biomes.find((biome) => score >= biome.depth[0] && score < biome.depth[1]) || biomes[biomes.length - 1] || null;
+}
+
+function storyChapter(score = state.meta?.best || 0) {
+  const chapters = window.OttiskContent?.DEFAULT_CATALOG?.chapters || [];
+  return [...chapters].filter((chapter) => score >= (chapter.unlock?.score || 0)).sort((a, b) => b.order - a.order)[0] || null;
+}
+
+function applyContentBiome() {
+  const biome = contentBiome();
+  if (!biome) return;
+  app.dataset.biome = biome.id;
+  if ((state.meta?.colorblind || "off") === "off" && !state.meta?.highContrast) {
+    app.style.setProperty("--bg0", biome.palette.background);
+    app.style.setProperty("--accent-a", biome.palette.accent);
+    app.style.setProperty("--danger", biome.palette.hazard);
+  } else {
+    app.style.removeProperty("--bg0");
+    app.style.removeProperty("--accent-a");
+    app.style.removeProperty("--danger");
+  }
+  refreshCssCache();
+}
+
+function renderStory() {
+  const chapter = storyChapter();
+  const biome = contentBiome(state.meta?.best || 0);
+  const chapterEl = document.getElementById("story-chapter");
+  const biomeEl = document.getElementById("story-biome");
+  if (chapterEl) chapterEl.textContent = chapter ? `${chapter.order}. ${chapter.name} · ${chapter.synopsis}` : "";
+  if (biomeEl) biomeEl.textContent = biome ? `${biome.name} · ${biome.description}` : "";
+}
+
+function syncStoryChapter() {
+  const chapter = storyChapter(state.score);
+  if (!chapter || !state.meta) return;
+  const seen = state.meta.seenChapters || [];
+  if (seen.includes(chapter.id)) return;
+  state.meta.seenChapters = [...seen, chapter.id];
+  saveMeta();
+  renderStory();
+  if (state.running) showMechanicCard(`chapter-${chapter.id}`, chapter.name, chapter.synopsis);
+}
+
 function applyAccessibilityPrefs() {
   if (!state.meta) return;
   app.classList.toggle("reduce-motion", !!state.meta.reduceMotion);
   app.classList.toggle("high-contrast", !!state.meta.highContrast);
+  app.classList.toggle("large-ui", !!state.meta.largeUi);
+  app.classList.toggle("one-hand-left", state.meta.oneHand === "left");
+  app.classList.toggle("one-hand-right", state.meta.oneHand === "right");
+  app.dataset.colorblind = state.meta.colorblind || "off";
   refreshCssCache();
 }
 
@@ -4087,6 +4301,27 @@ function renderSettings() {
     quality.textContent = names[mode];
     quality.classList.toggle("on", mode !== "auto");
     quality.setAttribute("aria-pressed", mode !== "auto" ? "true" : "false");
+  }
+  const largeUi = document.getElementById("btn-large-ui");
+  if (largeUi) {
+    largeUi.classList.toggle("on", !!state.meta.largeUi);
+    largeUi.setAttribute("aria-pressed", state.meta.largeUi ? "true" : "false");
+  }
+  const oneHand = document.getElementById("btn-one-hand");
+  if (oneHand) {
+    const value = state.meta.oneHand || "off";
+    oneHand.classList.toggle("on", value !== "off");
+    oneHand.setAttribute("aria-pressed", value !== "off" ? "true" : "false");
+    oneHand.textContent = value === "left"
+      ? tr("one_hand_left", "Левая рука")
+      : value === "right" ? tr("one_hand_right", "Правая рука") : tr("one_hand", "Управление одной рукой");
+  }
+  const colorblind = document.getElementById("btn-colorblind");
+  if (colorblind) {
+    const value = state.meta.colorblind || "off";
+    colorblind.classList.toggle("on", value !== "off");
+    colorblind.setAttribute("aria-pressed", value !== "off" ? "true" : "false");
+    colorblind.textContent = tr(`colorblind_${value}`, tr("colorblind_mode", "Цветовая схема"));
   }
   renderDifficultyPicker();
   renderControlPicker();
@@ -4734,6 +4969,7 @@ function applyThemeFromScore(announce = false) {
   if (!changed && !announce) return;
   state.theme = theme;
   app.dataset.theme = String(theme);
+  applyContentBiome();
   refreshCssCache();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", cssVar("--bg0", "#241828"));
   if (changed && announce && state.score >= 100) {
@@ -4754,7 +4990,7 @@ function updateScoreUi(pop = false) {
 }
 
 function updateHungerUi() {
-  const pct = Math.round(clamp(state.hunger, 0, 100));
+  const pct = Math.round(clamp((state.hunger / Math.max(1, state.maxHunger || 100)) * 100, 0, 100));
   if (uiCache.hunger !== pct) {
     uiCache.hunger = pct;
     heatFillEl.style.width = `${pct}%`;
@@ -4847,6 +5083,8 @@ function afterScoreChange(pop = false) {
   syncMutation();
   applyThemeFromScore(pop);
   checkScoreMilestones();
+  syncStoryChapter();
+  earnProgressionFromBest();
   evaluateDaily();
 }
 
@@ -5227,6 +5465,69 @@ function grantStarterPack(fromPurchase = false) {
   showToast(fromPurchase ? "пак открыт · 3 героя + 60 следов" : "стартовый пак");
 }
 
+function resolveNextStep() {
+  if (!state.meta) return null;
+  const daily = currentDailyDef();
+  if (daily && !state.meta.dailyDone) {
+    return {
+      title: `Цель · ${daily.title}`,
+      sub: daily.label(state),
+      run: () => {
+        state.meta.dailyModeEnabled = true;
+        saveMeta();
+        updateModeToggles();
+        hideFlowScreens();
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  if (!state.meta.weekRewardTaken) {
+    const quest = currentWeeklyDef();
+    const progress = Math.min(quest.target, state.meta.weekProgress || 0);
+    return {
+      title: `Цель · ${quest.title}`,
+      sub: `${progress}/${quest.target} ${quest.unit}`,
+      run: () => {
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  const hero = nextLockedPremiumHero();
+  if (hero) {
+    return {
+      title: `Открыть · ${hero.name}`,
+      sub: `${Math.min(state.meta.marks || 0, hero.cost)}/${hero.cost} следов`,
+      run: () => {
+        goToMenu();
+        document.getElementById("btn-shop")?.click();
+      },
+    };
+  }
+  if ((state.meta.ghostScore || 0) >= 20 && state.meta.ghostRaceEnabled !== false) {
+    return {
+      title: "Гонка с призраком",
+      sub: `лучший след · ${state.meta.ghostScore}`,
+      run: () => {
+        state.meta.ghostRaceEnabled = true;
+        saveMeta();
+        updateModeToggles();
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  return {
+    title: "Новый рекорд",
+    sub: "ещё один забег",
+    run: () => {
+      screenOverEl.classList.add("hidden");
+      startGame();
+    },
+  };
+}
+
 function nextDeathOfferHero() {
   return HEROES.find((h) => h.iap && !isHeroOwned(h.id)) || null;
 }
@@ -5235,23 +5536,22 @@ function renderDeathOffers() {
   const box = document.getElementById("death-offers");
   if (!box || !state.meta) return;
   box.textContent = "";
-  const runs = state.meta.runs || 0;
-  const hero = nextDeathOfferHero();
-  if (hero) {
+  const step = resolveNextStep();
+  if (step) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-secondary death-offer";
-    btn.innerHTML = `<span class="btn-main">${hero.name} · ${hero.priceLabel || ""}</span><span class="btn-sub">${hero.blurb || hero.ability} · уникальная сила</span>`;
-    btn.addEventListener("click", () => purchaseIapHero(hero.id).catch(() => {}));
+    btn.innerHTML = `<span class="btn-main">${step.title}</span><span class="btn-sub">${step.sub}</span>`;
+    btn.addEventListener("click", () => step.run());
     box.appendChild(btn);
   }
-  if (!state.meta.starterPackBought && runs >= 1 && runs <= 8) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-secondary death-offer starter";
-    btn.innerHTML = `<span class="btn-main">Стартовый пак · ${STARTER_PACK_PRICE_LABEL}</span><span class="btn-sub">скат + удильщик + наутилус · +60 следов</span>`;
-    btn.addEventListener("click", () => purchaseStarterPack().catch(() => {}));
-    box.appendChild(btn);
+  const shareSub = document.getElementById("share-sub");
+  if (shareSub) {
+    shareSub.textContent = state.meta.dailyDone
+      ? `ежедневка · +${DAILY_QUEST_REWARD} следов`
+      : state.dailyMode
+        ? "забег дня · Stories"
+        : "Stories · волна и герой";
   }
   box.classList.toggle("hidden", !box.childElementCount);
 }
@@ -5259,6 +5559,7 @@ function renderDeathOffers() {
 function updateModeToggles() {
   const dailyBtn = document.getElementById("btn-mode-daily");
   const coopBtn = document.getElementById("btn-mode-coop");
+  const ghostBtn = document.getElementById("btn-mode-ghost");
   if (dailyBtn) {
     dailyBtn.classList.toggle("on", !!state.meta?.dailyModeEnabled);
     dailyBtn.setAttribute("aria-pressed", state.meta?.dailyModeEnabled ? "true" : "false");
@@ -5266,6 +5567,11 @@ function updateModeToggles() {
   if (coopBtn) {
     coopBtn.classList.toggle("on", !!state.meta?.coopEnabled);
     coopBtn.setAttribute("aria-pressed", state.meta?.coopEnabled ? "true" : "false");
+  }
+  if (ghostBtn) {
+    const on = state.meta?.ghostRaceEnabled !== false;
+    ghostBtn.classList.toggle("on", on);
+    ghostBtn.setAttribute("aria-pressed", on ? "true" : "false");
   }
   document.querySelectorAll(".run-mode-btn").forEach((button) => {
     const selected = button.dataset.runMode === (state.meta?.runMode || "normal");
@@ -5277,6 +5583,7 @@ function updateModeToggles() {
     const bits = [];
     if (state.meta?.dailyModeEnabled) bits.push("забег дня");
     if (state.meta?.coopEnabled) bits.push("дуэт");
+    if (state.meta?.ghostRaceEnabled !== false && (state.meta?.ghostScore || 0) >= 20) bits.push("призрак");
     if (state.meta?.runMode === "endless") bits.push(tr("mode_endless", "бесконечный океан"));
     if (state.meta?.runMode === "boss") bits.push(tr("mode_boss", "босс-раш"));
     if (state.meta?.runMode === "calm") bits.push(tr("mode_calm", "спокойный режим"));
@@ -5332,6 +5639,25 @@ function randGame(a = 0, b = 1) {
   return rand(a, b);
 }
 
+function recordReplaySample(action = 0, value = 0) {
+  const samples = state.replaySamples || (state.replaySamples = []);
+  const previous = samples[samples.length - 1]?.[0] ?? -1;
+  const time = Math.max(previous + 1, Math.round((state.elapsed || 0) * 1000));
+  samples.push([time, Math.max(0, Math.min(31, Math.round(action))), Math.max(-1000000, Math.min(1000000, Math.round(value)))]);
+  if (samples.length > 94) {
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    state.replaySamples = [first, ...samples.slice(1, -1).filter((_, index) => index % 2 === 0), last];
+  }
+}
+
+function replayPositionValue() {
+  if (!state.life) return 0;
+  const x = Math.round(clamp(state.life.x / Math.max(1, state.width), 0, 1) * 999);
+  const y = Math.round(clamp(state.life.y / Math.max(1, state.height), 0, 1) * 999);
+  return x * 1000 + y;
+}
+
 function sampleGhostPath(dt) {
   if (!state.life || !state.running) return;
   state.ghostSampleAcc += dt;
@@ -5352,6 +5678,7 @@ function persistGhostPath() {
 function spawnRunGhost() {
   state.ghost = null;
   state.ghostIndex = 0;
+  if (state.meta?.ghostRaceEnabled === false) return;
   const path = state.meta?.ghostPath;
   if (!path || path.length < 8) return;
   if ((state.meta.ghostScore || 0) < 20) return;
@@ -5453,8 +5780,16 @@ function finalizeGameOver(reason) {
   state.continueBusy = false;
   state.timeScale = 1;
   const isNewBest = state.score > (state.bestAtStart || 0);
+  recordReplaySample(4, replayPositionValue());
+  const replayDuration = Math.max(250, Math.round(state.elapsed * 1000), state.replaySamples.at(-1)?.[0] || 0);
+  const runReplay = {
+    score: state.score,
+    durationMs: replayDuration,
+    samples: state.replaySamples.slice(0, 96),
+  };
   if (state.meta) {
     state.meta.runs = Math.max(0, (state.meta.runs || 0) + 1);
+    state.meta.lastReplay = runReplay;
     if (state.tutorialRun) state.meta.onboarded = true;
     saveMeta();
   }
@@ -5492,8 +5827,13 @@ function finalizeGameOver(reason) {
     }
     state.meta.dailyBest = Math.max(state.meta.dailyBest || 0, state.score);
     saveMeta();
-    if (window.OttiskCloud?.isLinked?.()) {
-      window.OttiskCloud.submitDailyScore(state.score, state.meta.cloudName || "").catch(() => {});
+    if (window.OttiskSocial?.isAvailable?.()) {
+      window.OttiskSocial.submitDailyScore(
+        state.score,
+        state.meta.cloudName || "",
+        runReplay.durationMs,
+        runReplay.samples,
+      ).catch(() => {});
     }
   }
   evaluateTrophies({ wordDone: state.wordDone });
@@ -5554,7 +5894,7 @@ function createLife(x, y, opts = {}) {
       buzz([14, 28, 14]);
       if (state.tutorialRun) {
         state.tutorialStep = Math.max(state.tutorialStep, 2);
-        showCoach("ШАГ 2 · ВЕДИ К БЛИЖАЙШЕМУ СВЕТУ", 2200, true);
+        showCoach("К СВЕТУ", 1800, true);
       } else {
         showCoach("ЕШЬ СВЕТ", 1500, true);
       }
@@ -5737,7 +6077,14 @@ function shareText() {
   const wave = waveForScore(state.score);
   const waveN = waveNumber(wave);
   const hero = activeHero();
-  return `Мой след в ОТТИСК: ${state.score} света · волна ${waveN} · ${hero.name}. ${SHARE_URL}`;
+  const bits = [`Мой след в ОТТИСК: ${state.score} света · волна ${waveN} · ${hero.name}`];
+  if (state.dailyMode) bits.push("забег дня");
+  if (state.meta?.dailyDone) bits.push(`ежедневка ✓ · +${DAILY_QUEST_REWARD} следов`);
+  if ((state.meta?.ghostScore || 0) > 0 && state.meta?.ghostRaceEnabled !== false) {
+    bits.push(`призрак ${state.meta.ghostScore}`);
+  }
+  bits.push(SHARE_URL);
+  return bits.join(" · ");
 }
 
 function canvasToBlob(canvasEl) {
@@ -5911,7 +6258,7 @@ async function shareRun() {
 
 function sparkProfile(type) {
   if (type === "super") {
-    return { type, worth: 10, restore: 48, color: "#ff2f45", r: rand(18, 22), super: true, form: "pulsar" };
+    return { type, worth: 10, restore: 48, color: "#ff2f45", r: rand(14, 17), super: true, form: "pulsar" };
   }
   if (type === "rare") {
     return { type, worth: 3, restore: 35, color: "#ffcc44", r: rand(14, 18), form: "prism" };
@@ -5930,6 +6277,12 @@ function sparkProfile(type) {
   }
   if (type === "seed") {
     return { type, worth: 2, restore: 16, color: "#58ffb0", r: rand(13, 16.5), seed: true, form: "seed" };
+  }
+  if (type === "ember") {
+    return { type, worth: 3, restore: 30, color: "#ff9a62", r: rand(13, 16), form: "ember" };
+  }
+  if (type === "mirror") {
+    return { type, worth: 2, restore: 20, color: "#9be7ff", r: rand(12, 15), form: "mirror", mirror: true };
   }
   const normals = ["#ffd080", "#ffb868", "#7affd4", "#9ad0ff", cssVar("--accent-b", "#62f0c8")];
   return {
@@ -5950,54 +6303,17 @@ function rollSparkType() {
     return "normal";
   }
   const r = Math.random();
-  if (r < 0.1) return "rare";
-  if (r < 0.2) return "cool";
-  if (r < 0.27) return "bait";
-  if (r < 0.32 && !state.symbiote) return "seed";
+  if (r < 0.09) return "rare";
+  if (r < 0.17) return "cool";
+  if (r < 0.23) return "bait";
+  if (r < 0.28) return "ember";
+  if (r < 0.32) return "mirror";
+  if (r < 0.36 && !state.symbiote) return "seed";
   return "normal";
 }
 
 function maybeSpawnSuperStar() {
-  if (!state.running || state.score >= 100 || state.superStarEaten) return;
-  if (state.sparks.some((s) => s.type === "super")) return;
-  const ready = state.stats.sparkEats >= 1 || state.elapsed > 3.2;
-  if (!ready) return;
-  const margin = 56;
-  const side = Math.floor(Math.random() * 4);
-  let x = state.width * 0.72;
-  let y = state.height * 0.28;
-  if (side === 0) {
-    x = rand(margin, state.width - margin);
-    y = margin + 24;
-  } else if (side === 1) {
-    x = state.width - margin - 10;
-    y = rand(margin, state.height * 0.55);
-  } else if (side === 2) {
-    x = rand(margin, state.width - margin);
-    y = state.height - margin - 24;
-  } else {
-    x = margin + 10;
-    y = rand(margin, state.height * 0.55);
-  }
-  if (state.life && dist(x, y, state.life.x, state.life.y) < 110) {
-    x = clamp(state.width - state.life.x, margin, state.width - margin);
-    y = clamp(state.height * 0.25, margin, state.height - margin);
-  }
-  const profile = sparkProfile("super");
-  state.sparks.push({
-    x,
-    y,
-    vx: rand(-0.25, 0.25),
-    vy: rand(-0.25, 0.25),
-    pulse: Math.random() * Math.PI * 2,
-    tutorial: false,
-    grace: 0.55,
-    pinned: true,
-    ...profile,
-  });
-  state.superStarSpawned = true;
-  tipOnce("super", "ПУЛЬСАР", 1800);
-  floatText(x, y - 28, "ПУЛЬСАР", "#ff2f45", 18);
+  // Disabled: the early-game ПУЛЬСАР orb was too large and distracting.
 }
 
 function spawnComet() {
@@ -6147,7 +6463,12 @@ function resetRun() {
   state.score = 0;
   state.combo = 0;
   state.comboClock = 0;
-  state.hunger = 100;
+  state.progressionEffects = window.OttiskProgression?.effects?.(progressionState()) || {};
+  state.maxHunger = 100 + (state.progressionEffects.maxHunger || 0);
+  state.hunger = state.maxHunger;
+  state.progressionRevives = state.progressionEffects.revives || 0;
+  state.replaySamples = [[0, 0, 0]];
+  state.replaySampleAcc = 0;
   state.theme = 0;
   state.mutation = MUTATIONS[0];
   state.unlockedMuts = ["spark"];
@@ -6325,26 +6646,26 @@ function startGame() {
     state.demo = false;
     state.lastTs = performance.now();
     const coach = state.tutorialRun
-      ? "ШАГ 1 · НАЖМИ И ДЕРЖИ"
+      ? "ДЕРЖИ ПАЛЕЦ"
       : state.runMode === "boss"
         ? "БОСС-РАШ"
         : state.runMode === "endless"
-          ? "БЕСКОНЕЧНЫЙ ОКЕАН"
+          ? "ОКЕАН"
           : state.runMode === "calm"
-            ? "СПОКОЙНЫЙ РЕЖИМ"
+            ? "СПОКОЙНО"
       : state.coopMode
       ? "ДВА ПАЛЬЦА"
       : state.dailyMode
         ? "ЗАБЕГ ДНЯ"
         : controlMode() === "joystick"
           ? "ДЕРЖИ СТИК"
-          : "УДЕРЖИВАЙ";
-    showCoach(coach, 1700, true);
+          : "ДЕРЖИ";
+    showCoach(coach, 1400, true);
     setTimeout(() => maybeShowHeroAbilityTip(), 1900);
-    if (!state.tutorialRun) {
+    if (!state.tutorialRun && (state.meta?.runs || 0) < 2) {
       setTimeout(() => {
-        showMechanicCard("hold", "Касание", "Пока палец на экране — ты жив. Отпусти — след гаснет.");
-      }, 2400);
+        showMechanicCard("hold", "Касание", "Палец на экране — живёшь.");
+      }, 2200);
     }
     if (state.ghost) {
       setTimeout(() => {
@@ -6392,6 +6713,20 @@ function goToMenu() {
 
 function finishRun(reason) {
   if (!state.running) return;
+  if ((state.progressionRevives || 0) > 0) {
+    state.progressionRevives -= 1;
+    state.hunger = Math.max(state.hunger, (state.maxHunger || 100) * 0.55);
+    state.safeUntil = performance.now() + 2600;
+    if (!state.life) createLife(state.width * 0.5, state.height * 0.56, { silent: true });
+    for (const hunter of state.hunters) {
+      if (!hunter.boss) placeHunterOnEdge(hunter);
+      hunter.grace = Math.max(hunter.grace || 0, 1.5);
+    }
+    burst(state.life.x, state.life.y, cssVar("--life", "#7affd4"), 30, 6);
+    showCoach(window.OttiskI18n?.locale === "en" ? "SECOND PULSE" : "ВТОРОЙ ИМПУЛЬС", 1800, true);
+    goalChime();
+    return;
+  }
   state.running = false;
   state.paused = false;
   state.demo = false;
@@ -6441,6 +6776,7 @@ function onCanvasDown(e) {
   e.preventDefault();
   unlockAudio();
   const p = pointerPos(e);
+  recordReplaySample(1, Math.round(clamp(p.x / Math.max(1, state.width), 0, 1) * 999) * 1000 + Math.round(clamp(p.y / Math.max(1, state.height), 0, 1) * 999));
   try {
     canvas.setPointerCapture(e.pointerId);
   } catch (_) {
@@ -6576,7 +6912,7 @@ function updateJoystickMove(dt) {
   if (mag < 0.04) return;
   const prevX = state.life.x;
   const prevY = state.life.y;
-  const speed = STICK_SPEED * mag * (playerDifficulty().dash || 1);
+  const speed = STICK_SPEED * mag * (playerDifficulty().dash || 1) * (state.progressionEffects?.speedMultiplier || 1);
   state.life.x += nx * speed * dt;
   state.life.y += ny * speed * dt;
   applyLifeMove(prevX, prevY);
@@ -6621,6 +6957,7 @@ function onCanvasUp(e) {
   if (!state.touchActive) return;
   if (state.pointerId != null && e.pointerId !== state.pointerId) return;
   state.touchActive = false;
+  recordReplaySample(3, replayPositionValue());
   state.pointerId = null;
   state.stick = null;
   if (state.running) releaseLife();
@@ -6747,7 +7084,7 @@ function eatSpark(index, spark) {
   const moveFactor = state.life ? clamp((state.life.speed || 0) / 12, 0.2, 1) : 0.2;
   // AFK / standing eats barely refill hunger — must hunt light
   const restore = spark.restore * (0.35 + 0.65 * moveFactor);
-  state.hunger = clamp(state.hunger + restore, 0, 100);
+  state.hunger = clamp(state.hunger + restore, 0, state.maxHunger || 100);
   updateHungerUi();
   if (spark.type === "bait") {
     if (!inOpening()) spawnHunter(false);
@@ -6758,6 +7095,14 @@ function eatSpark(index, spark) {
     buzz(6);
   } else if (spark.type === "seed") {
     attachSymbiote(spark.x, spark.y);
+  } else if (spark.type === "mirror") {
+    state.safeUntil = Math.max(state.safeUntil || 0, performance.now() + 1600);
+    floatText(spark.x, spark.y - 16, "отражение", "#9be7ff", 12);
+    buzz([6, 10, 6]);
+  } else if (spark.type === "ember") {
+    state.hunger = clamp(state.hunger + 8, 0, state.maxHunger || 100);
+    floatText(spark.x, spark.y - 16, "жар", "#ff9a62", 12);
+    buzz(7);
   } else if (spark.type !== "super") {
     buzz(5);
   }
@@ -6766,17 +7111,19 @@ function eatSpark(index, spark) {
     state.firstEatDone = true;
     goalChime();
     buzz([10, 18, 10]);
-    floatText(spark.x, spark.y - 18, "!", cssVar("--gold", "#ffe898"), 22);
+    floatText(spark.x, spark.y - 18, "!", cssVar("--gold", "#ffe898"), 18);
     if (state.tutorialRun) {
       state.tutorialStep = 3;
-      showCoach("ШАГ 3 · НЕ ОТПУСКАЙ И ОБХОДИ ХИЩНИКОВ", 2600, true);
+      showCoach("НЕ ОТПУСКАЙ", 2000, true);
     }
   }
-  if (state.stats.sparkEats === 1) tipOnce("move", "ЛОВИ СВЕТ", 1600);
+  if (state.stats.sparkEats === 1) tipOnce("move", "ЛОВИ СВЕТ", 1200);
   syncWave(true);
   playSparkTone(spark.type);
   eatSparkBlast(spark, openingEat);
-  addScore(spark.worth, spark.x, spark.y - 12, { color: spark.color });
+  const lightMultiplier = (state.progressionEffects?.lightMultiplier || 1)
+    * (activeEventId() === "light-bloom" ? 1.5 : activeEventId() === "ember-rain" ? 1.35 : 1);
+  addScore(Math.max(1, Math.round(spark.worth * lightMultiplier)), spark.x, spark.y - 12, { color: spark.color });
   notePremiumEat();
 }
 
@@ -7015,6 +7362,15 @@ function updateHunters(dt) {
       } else if (species === "ghost") {
         tx = state.life.x + Math.cos(angOff) * (orbitR * 0.7);
         ty = state.life.y + Math.sin(angOff * 1.2) * (orbitR * 0.7);
+      } else if (species === "crab") {
+        tx = state.life.x + Math.sin(hunter.weave) * 90;
+        ty = state.life.y + 36;
+      } else if (species === "urchin") {
+        tx = state.life.x + Math.cos(angOff) * 28;
+        ty = state.life.y + Math.sin(angOff) * 28;
+      } else if (species === "mirror") {
+        tx = state.width - state.life.x;
+        ty = state.height - state.life.y;
       } else if (dLife > 160) {
         tx = state.life.x;
         ty = state.life.y;
@@ -7041,10 +7397,17 @@ function updateHunters(dt) {
     if (activeEventId() === "raid") speed *= 1.08;
     if (activeEventId() === "sanctuary") speed *= 0.72;
     if (activeEventId() === "blackout") speed *= 1.12;
+    if (activeEventId() === "warm-current") speed *= 0.92;
+    if (activeEventId() === "tangled-path") speed *= 1.16;
+    if (activeEventId() === "mirror-tide") speed *= 1.1;
+    if (activeEventId() === "ember-rain") speed *= 0.95;
     if (inInkDive()) speed *= 0.35;
     if (species === "dart" && hunter.dashT > 0) speed *= 2.05 * diff.dash;
     if (species === "shark" && hunter.dashT > 0) speed *= 1.75 * diff.dash;
     if (species === "ray") speed *= 0.92;
+    if (species === "crab") speed *= 0.72;
+    if (species === "urchin") speed *= 0.48;
+    if (species === "mirror") speed *= 1.05;
     if (hunter.boss || species === "boss") speed *= bossSpeedMul;
     speed *= heroAuraSlowMul(hunter);
 
@@ -7208,6 +7571,11 @@ function updateRun(dt) {
   }
   state.time += dt;
   state.elapsed += dt;
+  state.replaySampleAcc += dt;
+  if (state.replaySampleAcc >= 2.5) {
+    state.replaySampleAcc = 0;
+    recordReplaySample(state.touchActive ? 2 : 0, replayPositionValue());
+  }
   state.spawnAcc += dt;
   state.comboClock = Math.max(0, state.comboClock - dt);
   if (state.comboClock <= 0 && state.combo !== 0) {
@@ -7555,90 +7923,7 @@ function drawHeroFrame(body) {
 }
 
 function drawLightOrb(x, y, r, color, pulse, alpha = 1, kind = "normal") {
-  const isSuper = kind === "super";
-  const isRare = kind === "rare";
-  const fancy = isSuper || isRare;
-  const wob = 1 + Math.sin(pulse) * (isSuper ? 0.14 : 0.1);
-  const bodyR = r * wob;
-  const hi = mixColor(color, "#ffffff", 0.65);
-  ctx.save();
-  ctx.translate(x, y);
-  // Common sparks: soft filled glow (no radial gradient alloc).
-  ctx.globalAlpha = alpha * (fancy ? 0.38 : 0.28);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(0, 0, bodyR * (isSuper ? 2.55 : fancy ? 2.1 : 1.85), 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.globalAlpha = alpha;
-  if (fancy) {
-    const core = ctx.createRadialGradient(-bodyR * 0.2, -bodyR * 0.25, bodyR * 0.05, 0, 0, bodyR);
-    core.addColorStop(0, mixColor(color, "#ffffff", 0.75));
-    core.addColorStop(0.55, color);
-    core.addColorStop(1, mixColor(color, "#102038", 0.35));
-    ctx.fillStyle = core;
-  } else {
-    ctx.fillStyle = color;
-  }
-  ctx.beginPath();
-  const lobes = isSuper ? 7 : isRare ? 6 : 5;
-  for (let i = 0; i <= lobes; i += 1) {
-    const a = (i / lobes) * Math.PI * 2 + pulse * 0.2;
-    const rad = bodyR * (0.72 + 0.28 * Math.sin(pulse * 1.7 + i * 1.3));
-    const px = Math.cos(a) * rad;
-    const py = Math.sin(a) * rad;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = alpha * 0.7;
-  ctx.fillStyle = hi;
-  ctx.beginPath();
-  ctx.arc(-bodyR * 0.18, -bodyR * 0.2, bodyR * 0.28, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Orbiting motes / ribbons
-  const moteCount = isSuper ? 5 : isRare ? 3 : 2;
-  for (let i = 0; i < moteCount; i += 1) {
-    const a = pulse * (1.4 + i * 0.18) + (i / moteCount) * Math.PI * 2;
-    const orbit = bodyR * (1.15 + (i % 2) * 0.35 + Math.sin(pulse + i) * 0.08);
-    const mx = Math.cos(a) * orbit;
-    const my = Math.sin(a) * orbit * 0.72;
-    ctx.globalAlpha = alpha * (0.55 + (i % 2) * 0.25);
-    ctx.fillStyle = hi;
-    ctx.beginPath();
-    ctx.arc(mx, my, Math.max(1.4, bodyR * (isSuper ? 0.16 : 0.11)), 0, Math.PI * 2);
-    ctx.fill();
-    if (fancy) {
-      ctx.strokeStyle = mixColor(color, "#ffffff", 0.35);
-      ctx.lineWidth = 1.2;
-      ctx.globalAlpha = alpha * 0.35;
-      ctx.beginPath();
-      ctx.arc(0, 0, orbit, a - 0.45, a + 0.05);
-      ctx.stroke();
-    }
-  }
-
-  if (isSuper) {
-    ctx.globalAlpha = alpha * 0.7;
-    ctx.strokeStyle = mixColor(color, "#ffffff", 0.25);
-    ctx.lineWidth = 2;
-    const ring = bodyR * (1.55 + Math.sin(pulse * 2) * 0.2);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, ring * 1.15, ring * 0.55, pulse * 0.5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(0, 0, ring * 0.55, ring * 1.1, -pulse * 0.4, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  ctx.globalAlpha = alpha * 0.9;
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.beginPath();
-  ctx.arc(-bodyR * 0.18, -bodyR * 0.2, Math.max(1.6, bodyR * 0.18), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (artDraw("drawLightOrb", x, y, r, color, pulse, alpha, kind)) return;
 }
 
 function inkPolypBodyPath(s) {
@@ -7688,184 +7973,11 @@ function drawOctopusTentacle(s, wob, i, ink, accent, alpha) {
 }
 
 function drawInkPolyp(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accent = cssVar("--accent-a", "#ff9a62");
-  const accentB = cssVar("--accent-b", "#7affd4");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r;
-  const wob = body.wobble;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  for (let i = 0; i < 8; i += 1) {
-    drawOctopusTentacle(s, wob, i, ink, accentB, alpha);
-  }
-  if ((body.speed || 0) > 5) {
-    ctx.globalAlpha = alpha * 0.28;
-    ctx.fillStyle = mixColor(ink, accentB, 0.4);
-    ctx.beginPath();
-    ctx.ellipse(-s * 1.15, 0, s * 0.55, s * 0.28, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = alpha;
-  const mantle = ctx.createRadialGradient(s * 0.12, -s * 0.18, s * 0.1, s * 0.05, 0, s * 0.95);
-  mantle.addColorStop(0, mixColor(ink, "#fff4e8", 0.28));
-  mantle.addColorStop(0.45, mixColor(ink, accent, 0.12));
-  mantle.addColorStop(1, mixColor(ink, "#1a1020", 0.28));
-  ctx.fillStyle = mantle;
-  ctx.strokeStyle = mixColor(ink, "#140818", 0.25);
-  ctx.lineWidth = 2.4;
-  inkPolypBodyPath(s);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = mixColor(ink, accentB, 0.18);
-  ctx.globalAlpha = alpha * 0.55;
-  for (let i = 0; i < 10; i += 1) {
-    const a = i * 0.62 + wob * 0.2;
-    const pr = s * (0.18 + (i % 3) * 0.08);
-    const px = Math.cos(a) * s * (0.22 + (i % 4) * 0.1);
-    const py = Math.sin(a * 1.1) * s * (0.18 + (i % 3) * 0.08);
-    ctx.beginPath();
-    ctx.ellipse(px, py, pr * 0.35, pr * 0.28, a, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = mixColor(ink, "#2a1428", 0.35);
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.55, s * 0.08, s * 0.18, s * 0.12, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  const blink = Math.sin(wob * 0.32) > 0.93 ? 0.2 : 1;
-  for (const side of [-1, 1]) {
-    const ex = s * 0.38;
-    const ey = side * s * 0.28;
-    ctx.fillStyle = "#fffdf8";
-    ctx.beginPath();
-    ctx.ellipse(ex, ey, s * 0.2, s * 0.24 * blink, side * 0.15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = mixColor(accentB, "#1a2840", 0.35);
-    ctx.beginPath();
-    ctx.ellipse(ex + s * 0.04, ey, s * 0.11, s * 0.13 * blink, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#120818";
-    ctx.beginPath();
-    ctx.arc(ex + s * 0.06, ey, s * 0.07 * blink, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(ex + s * 0.09, ey - s * 0.05, s * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = mixColor(ink, "#1a1020", 0.4);
-    ctx.lineWidth = Math.max(1.4, s * 0.05);
-    ctx.beginPath();
-    ctx.arc(ex - s * 0.02, ey - s * 0.2, s * 0.16, Math.PI * 1.1, Math.PI * 1.85);
-    ctx.stroke();
-  }
-  ctx.fillStyle = mixColor(ink, accent, 0.35);
-  ctx.globalAlpha = alpha * 0.9;
-  ctx.beginPath();
-  ctx.moveTo(s * 0.75, -s * 0.08);
-  ctx.quadraticCurveTo(s * 1.15, 0, s * 0.75, s * 0.1);
-  ctx.quadraticCurveTo(s * 0.62, 0, s * 0.75, -s * 0.08);
-  ctx.fill();
-  if (state.fever) {
-    ctx.strokeStyle = cssVar("--ember", "#ff9a62");
-    ctx.lineWidth = 1.8;
-    ctx.globalAlpha = alpha * (0.45 + Math.sin(state.time * 9) * 0.2);
-    inkPolypBodyPath(s * 1.08);
-    ctx.stroke();
-  }
-  if (hasMut("fang") && state.combo >= 4) {
-    ctx.strokeStyle = cssVar("--danger", "#ff5d7a");
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = "round";
-    ctx.globalAlpha = alpha * 0.95;
-    ctx.beginPath();
-    ctx.moveTo(s * 0.95, -s * 0.08);
-    ctx.lineTo(s * 1.35, -s * 0.18);
-    ctx.moveTo(s * 0.95, s * 0.08);
-    ctx.lineTo(s * 1.35, s * 0.18);
-    ctx.stroke();
-  }
-  ctx.restore();
+  if (artDraw("drawInkPolyp", body, alpha)) return;
 }
 
 function drawSpark(spark) {
-  const r = spark.r;
-  if (spark.comet) {
-    const ang = Math.atan2(spark.vy, spark.vx || 0.001);
-    ctx.save();
-    ctx.translate(spark.x, spark.y);
-    ctx.rotate(ang);
-    const trail = ctx.createLinearGradient(-40, 0, 14, 0);
-    trail.addColorStop(0, "transparent");
-    trail.addColorStop(0.55, spark.color);
-    trail.addColorStop(1, mixColor(spark.color, "#fff4d8", 0.4));
-    ctx.fillStyle = trail;
-    ctx.globalAlpha = 0.95;
-    ctx.beginPath();
-    ctx.moveTo(-40, 0);
-    ctx.lineTo(10, -6);
-    ctx.lineTo(10, 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-  if (spark.type === "seed") {
-    ctx.save();
-    ctx.translate(spark.x, spark.y);
-    ctx.rotate(spark.pulse * 0.4);
-    ctx.fillStyle = spark.color;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.55, r, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = mixColor(spark.color, "#ffffff", 0.3);
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 1.1);
-    ctx.lineTo(0, r * 0.35);
-    ctx.stroke();
-    ctx.restore();
-  } else {
-    const kind = spark.type === "super" ? "super" : spark.type === "rare" ? "rare" : "normal";
-    drawLightOrb(spark.x, spark.y, r, spark.color, spark.pulse, 1, kind);
-  }
-  if (spark.type === "super") {
-    const t = (state.time * 2.2) % 1;
-    ctx.globalAlpha = (1 - t) * 0.75;
-    ctx.strokeStyle = "#ff2f45";
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.ellipse(
-      spark.x,
-      spark.y,
-      r * (1.4 + t * 1.8),
-      r * (0.7 + t * 0.9),
-      state.time * 1.2,
-      0,
-      Math.PI * 2
-    );
-    ctx.stroke();
-    ctx.globalAlpha = 0.95;
-    ctx.fillStyle = "#ff2f45";
-    ctx.font = "800 12px Syne, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("ПУЛЬСАР", spark.x, spark.y - r * 1.85);
-    ctx.globalAlpha = 1;
-  }
-  if (spark.tutorial) {
-    const t = (state.time * 1.4) % 1;
-    for (let i = 0; i < 2; i += 1) {
-      const phase = (t + i * 0.5) % 1;
-      ctx.globalAlpha = (1 - phase) * 0.5;
-      ctx.strokeStyle = spark.color;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.arc(spark.x, spark.y, r * (1.4 + phase * 2), 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
+  if (artDraw("drawSpark", spark, state.time || 0)) return;
 }
 
 function drawCartoonEye(x, y, r, opts = {}) {
@@ -7897,719 +8009,47 @@ function drawCartoonEye(x, y, r, opts = {}) {
 }
 
 function drawEvilFish(hunter, alpha = 1, ghost = false) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r * (ghost ? 1.05 : 1);
-  const wobble = Math.sin(hunter.phase || 0) * 0.12;
-  const body = ghost ? "#c8d8ff" : cssVar("--danger", "#ff6888");
-  const dark = mixColor(body, ghost ? "#405070" : "#6a1028", 0.35);
-  const light = mixColor(body, "#ffffff", ghost ? 0.45 : 0.35);
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle + wobble);
-  ctx.globalAlpha = alpha * (ghost ? 0.72 : 1);
-  // soft glow
-  const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 2.2);
-  glow.addColorStop(0, mixColor(body, "#ffffff", 0.15));
-  glow.addColorStop(1, "transparent");
-  ctx.globalAlpha = alpha * 0.28;
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 2.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = alpha * (ghost ? 0.72 : 1);
-  // tail
-  ctx.fillStyle = dark;
-  ctx.beginPath();
-  ctx.moveTo(-r * 1.0, 0);
-  ctx.lineTo(-r * 1.85, -r * 0.62);
-  ctx.quadraticCurveTo(-r * 1.35, 0, -r * 1.85, r * 0.62);
-  ctx.closePath();
-  ctx.fill();
-  // body
-  const bodyGrad = ctx.createRadialGradient(-r * 0.15, -r * 0.2, r * 0.1, 0, 0, r * 1.2);
-  bodyGrad.addColorStop(0, light);
-  bodyGrad.addColorStop(0.55, body);
-  bodyGrad.addColorStop(1, dark);
-  ctx.fillStyle = bodyGrad;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 1.12, r * 0.78, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // belly
-  ctx.fillStyle = ghost ? "rgba(255,255,255,0.35)" : mixColor(body, "#ffd0d8", 0.55);
-  ctx.beginPath();
-  ctx.ellipse(r * 0.05, r * 0.22, r * 0.58, r * 0.36, 0.12, 0, Math.PI);
-  ctx.fill();
-  // scale dots
-  ctx.fillStyle = mixColor(body, "#ffffff", 0.22);
-  for (let i = 0; i < 5; i += 1) {
-    ctx.beginPath();
-    ctx.arc(-r * 0.35 + i * r * 0.22, -r * 0.08 + (i % 2) * r * 0.12, r * 0.07, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // dorsal + pectoral
-  ctx.fillStyle = dark;
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.15, -r * 0.65);
-  ctx.quadraticCurveTo(r * 0.05, -r * 1.35, r * 0.4, -r * 0.55);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(r * 0.05, r * 0.4);
-  ctx.quadraticCurveTo(-r * 0.2, r * 1.05, -r * 0.35, r * 0.35);
-  ctx.closePath();
-  ctx.fill();
-  // gill lines
-  ctx.strokeStyle = mixColor(dark, "#000000", 0.2);
-  ctx.lineWidth = 1.3;
-  for (let i = 0; i < 3; i += 1) {
-    const gx = r * (0.15 + i * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(gx, -r * 0.22);
-    ctx.quadraticCurveTo(gx + r * 0.08, 0, gx, r * 0.28);
-    ctx.stroke();
-  }
-  drawCartoonEye(r * 0.42, -r * 0.16, r * 0.24, { iris: ghost ? "#203050" : "#180810" });
-  // cheek
-  ctx.fillStyle = ghost ? "rgba(160,190,255,0.35)" : "rgba(255,90,120,0.35)";
-  ctx.beginPath();
-  ctx.ellipse(r * 0.35, r * 0.12, r * 0.14, r * 0.09, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // teeth
-  ctx.fillStyle = "#fffaf2";
-  for (let i = 0; i < 4; i += 1) {
-    const tx = r * 0.7 + i * r * 0.1;
-    ctx.beginPath();
-    ctx.moveTo(tx, r * 0.04);
-    ctx.lineTo(tx + r * 0.06, r * 0.26);
-    ctx.lineTo(tx + r * 0.12, r * 0.02);
-    ctx.closePath();
-    ctx.fill();
-  }
-  if (ghost) {
-    ctx.strokeStyle = "rgba(230,240,255,0.7)";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 1.25, r * 0.9, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  ctx.restore();
+  if (artDraw("drawEvilFish", hunter, alpha, ghost)) return;
 }
 
 function drawDartHunter(hunter, alpha = 1) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r;
-  const dash = hunter.dashT > 0;
-  const flap = Math.sin(hunter.phase || 0) * 0.12;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle);
-  ctx.globalAlpha = alpha;
-  if (dash) {
-    for (let i = 0; i < 3; i += 1) {
-      ctx.strokeStyle = `rgba(255,220,140,${0.45 - i * 0.12})`;
-      ctx.lineWidth = 2.2 - i * 0.4;
-      ctx.beginPath();
-      ctx.moveTo(-r * (2.2 + i * 0.55), (i - 1) * r * 0.18);
-      ctx.lineTo(-r * 0.7, (i - 1) * r * 0.05);
-      ctx.stroke();
-    }
-  }
-  // fins
-  ctx.fillStyle = "#ff8a3a";
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.2, -r * 0.2);
-  ctx.lineTo(-r * 0.7, -r * (0.95 + flap));
-  ctx.lineTo(r * 0.15, -r * 0.15);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.2, r * 0.2);
-  ctx.lineTo(-r * 0.7, r * (0.95 + flap));
-  ctx.lineTo(r * 0.15, r * 0.15);
-  ctx.closePath();
-  ctx.fill();
-  // body arrow
-  const grad = ctx.createLinearGradient(-r, 0, r * 1.8, 0);
-  grad.addColorStop(0, "#ff8a3a");
-  grad.addColorStop(0.5, "#ffc46a");
-  grad.addColorStop(1, "#ffe2a0");
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(r * 1.85, 0);
-  ctx.lineTo(-r * 0.95, -r * 0.58);
-  ctx.quadraticCurveTo(-r * 0.55, 0, -r * 0.95, r * 0.58);
-  ctx.closePath();
-  ctx.fill();
-  // belly stripe
-  ctx.fillStyle = "rgba(255,248,220,0.7)";
-  ctx.beginPath();
-  ctx.moveTo(r * 1.2, 0);
-  ctx.lineTo(-r * 0.4, -r * 0.18);
-  ctx.lineTo(-r * 0.4, r * 0.18);
-  ctx.closePath();
-  ctx.fill();
-  // tail notch
-  ctx.fillStyle = "#ff7a28";
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.85, 0);
-  ctx.lineTo(-r * 1.55, -r * 0.42);
-  ctx.lineTo(-r * 1.15, 0);
-  ctx.lineTo(-r * 1.55, r * 0.42);
-  ctx.closePath();
-  ctx.fill();
-  drawCartoonEye(r * 0.55, -r * 0.08, r * 0.2, { iris: "#2a1008", pupil: 0.5 });
-  // nose tip
-  ctx.fillStyle = "#ffefc8";
-  ctx.beginPath();
-  ctx.arc(r * 1.55, 0, r * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (artDraw("drawDartHunter", hunter, alpha)) return;
 }
 
 function drawJellyHunter(hunter, alpha = 1) {
-  const pulse = hunter.pulse || 0;
-  const r = hunter.r * (1 + Math.max(0, Math.sin(pulse)) * 0.16);
-  const wob = hunter.phase || 0;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.globalAlpha = alpha * 0.92;
-  // outer glow
-  const aura = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.8);
-  aura.addColorStop(0, "rgba(255,140,200,0.35)");
-  aura.addColorStop(1, "transparent");
-  ctx.fillStyle = aura;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.8, 0, Math.PI * 2);
-  ctx.fill();
-  // tentacles first
-  for (let i = 0; i < 7; i += 1) {
-    const ox = (i - 3) * r * 0.22;
-    const thick = 1.3 + (i % 2) * 0.5;
-    ctx.strokeStyle = i % 2 ? "rgba(255,150,210,0.75)" : "rgba(255,110,180,0.65)";
-    ctx.lineWidth = thick;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(ox, r * 0.05);
-    ctx.bezierCurveTo(
-      ox + Math.sin(wob + i) * r * 0.35,
-      r * 0.55,
-      ox - Math.cos(wob * 1.2 + i) * r * 0.3,
-      r * 1.05,
-      ox + Math.sin(wob * 0.8 + i * 0.7) * r * 0.25,
-      r * (1.45 + (i % 3) * 0.12)
-    );
-    ctx.stroke();
-    // tip bulb
-    ctx.fillStyle = "rgba(255,210,240,0.85)";
-    ctx.beginPath();
-    ctx.arc(
-      ox + Math.sin(wob * 0.8 + i * 0.7) * r * 0.25,
-      r * (1.45 + (i % 3) * 0.12),
-      r * 0.08,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  }
-  // bell
-  const bell = ctx.createRadialGradient(0, -r * 0.25, r * 0.08, 0, 0, r * 1.25);
-  bell.addColorStop(0, "rgba(255,220,240,0.98)");
-  bell.addColorStop(0.45, "rgba(255,120,180,0.9)");
-  bell.addColorStop(1, "rgba(120,30,90,0.25)");
-  ctx.fillStyle = bell;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 1.2, r * 0.9, 0, Math.PI, 0, true);
-  ctx.fill();
-  // frill
-  ctx.strokeStyle = "rgba(255,200,230,0.7)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i <= 10; i += 1) {
-    const t = i / 10;
-    const a = Math.PI + t * Math.PI;
-    const rr = r * (1.18 + Math.sin(t * Math.PI * 5 + wob) * 0.06);
-    const x = Math.cos(a) * rr;
-    const y = Math.sin(a) * r * 0.85;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  // spots
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.beginPath();
-  ctx.ellipse(-r * 0.35, -r * 0.25, r * 0.18, r * 0.12, -0.4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(r * 0.25, -r * 0.35, r * 0.12, r * 0.09, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  // cute angry eyes on bell
-  drawCartoonEye(-r * 0.28, -r * 0.05, r * 0.16, { iris: "#401028", lookX: r * 0.04, lookY: r * 0.02 });
-  drawCartoonEye(r * 0.28, -r * 0.05, r * 0.16, { iris: "#401028", lookX: r * 0.04, lookY: r * 0.02 });
-  ctx.restore();
+  if (artDraw("drawJellyHunter", hunter, alpha)) return;
 }
 
 function drawEelHunter(hunter, alpha = 1) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r;
-  const weave = hunter.weave || 0;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle);
-  ctx.globalAlpha = alpha;
-  // electric aura
-  ctx.strokeStyle = "rgba(120,255,200,0.28)";
-  ctx.lineWidth = r * 1.35;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-r * 2.45, Math.sin(weave) * r * 0.5);
-  ctx.quadraticCurveTo(-r * 0.7, -Math.sin(weave * 1.4) * r * 0.75, r * 0.3, Math.sin(weave * 0.8) * r * 0.28);
-  ctx.quadraticCurveTo(r * 1.2, -Math.sin(weave) * r * 0.4, r * 2.2, 0);
-  ctx.stroke();
-  // body
-  const eelGrad = ctx.createLinearGradient(-r * 2, 0, r * 2, 0);
-  eelGrad.addColorStop(0, "#1a8a68");
-  eelGrad.addColorStop(0.45, "#3cffb0");
-  eelGrad.addColorStop(1, "#9dffd8");
-  ctx.strokeStyle = eelGrad;
-  ctx.lineWidth = r * 0.9;
-  ctx.beginPath();
-  ctx.moveTo(-r * 2.4, Math.sin(weave) * r * 0.5);
-  ctx.quadraticCurveTo(-r * 0.8, -Math.sin(weave * 1.4) * r * 0.7, r * 0.2, Math.sin(weave * 0.8) * r * 0.25);
-  ctx.quadraticCurveTo(r * 1.1, -Math.sin(weave) * r * 0.35, r * 2.15, 0);
-  ctx.stroke();
-  // belly highlight
-  ctx.strokeStyle = "rgba(200,255,230,0.7)";
-  ctx.lineWidth = r * 0.32;
-  ctx.beginPath();
-  ctx.moveTo(-r * 2.0, Math.sin(weave) * r * 0.32);
-  ctx.lineTo(r * 1.7, 0);
-  ctx.stroke();
-  // segments
-  ctx.strokeStyle = "rgba(10,60,45,0.35)";
-  ctx.lineWidth = 1.2;
-  for (let i = 0; i < 6; i += 1) {
-    const t = i / 5;
-    const x = -r * 2.0 + t * r * 3.5;
-    const y = Math.sin(weave + t * 2) * r * 0.28;
-    ctx.beginPath();
-    ctx.moveTo(x, y - r * 0.28);
-    ctx.lineTo(x, y + r * 0.28);
-    ctx.stroke();
-  }
-  // dorsal ridge spikes
-  ctx.fillStyle = "#2ad890";
-  for (let i = 0; i < 4; i += 1) {
-    const x = -r * 1.4 + i * r * 0.55;
-    const y = Math.sin(weave + i) * r * 0.2 - r * 0.35;
-    ctx.beginPath();
-    ctx.moveTo(x - r * 0.12, y + r * 0.15);
-    ctx.lineTo(x, y - r * 0.28);
-    ctx.lineTo(x + r * 0.12, y + r * 0.15);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // sparks
-  ctx.fillStyle = "#e8fff4";
-  for (let i = 0; i < 3; i += 1) {
-    const sx = r * (0.2 + i * 0.45);
-    const sy = Math.sin(weave * 2 + i * 2) * r * 0.55;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy - r * 0.18);
-    ctx.lineTo(sx + r * 0.08, sy);
-    ctx.lineTo(sx, sy + r * 0.18);
-    ctx.lineTo(sx - r * 0.08, sy);
-    ctx.closePath();
-    ctx.fill();
-  }
-  drawCartoonEye(r * 1.55, -r * 0.1, r * 0.2, { iris: "#062018", lookX: r * 0.05 });
-  // little smile mouth
-  ctx.strokeStyle = "#062018";
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.arc(r * 1.9, r * 0.08, r * 0.16, 0.15, Math.PI - 0.15);
-  ctx.stroke();
-  ctx.restore();
+  if (artDraw("drawEelHunter", hunter, alpha)) return;
 }
 
 function drawSharkHunter(hunter, alpha = 1) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r;
-  const dash = hunter.dashT > 0;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle);
-  ctx.globalAlpha = alpha;
-  if (dash) {
-    ctx.fillStyle = "rgba(140,190,255,0.3)";
-    ctx.beginPath();
-    ctx.moveTo(-r * 3.4, 0);
-    ctx.lineTo(-r * 1.1, -r * 0.5);
-    ctx.lineTo(-r * 1.1, r * 0.5);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // pectoral fins
-  ctx.fillStyle = "#4a6a86";
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.1, r * 0.25);
-  ctx.quadraticCurveTo(-r * 0.2, r * 1.15, -r * 0.7, r * 0.55);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.15, -r * 0.2);
-  ctx.quadraticCurveTo(-r * 0.55, -r * 0.85, -r * 0.85, -r * 0.15);
-  ctx.closePath();
-  ctx.fill();
-  // body
-  const sharkGrad = ctx.createLinearGradient(0, -r, 0, r);
-  sharkGrad.addColorStop(0, "#8eb0cc");
-  sharkGrad.addColorStop(0.45, "#6a8eae");
-  sharkGrad.addColorStop(1, "#3d5a74");
-  ctx.fillStyle = sharkGrad;
-  ctx.beginPath();
-  ctx.moveTo(r * 1.7, 0);
-  ctx.quadraticCurveTo(r * 0.9, -r * 0.85, -r * 1.2, -r * 0.45);
-  ctx.lineTo(-r * 1.35, 0);
-  ctx.lineTo(-r * 1.2, r * 0.45);
-  ctx.quadraticCurveTo(r * 0.9, r * 0.85, r * 1.7, 0);
-  ctx.closePath();
-  ctx.fill();
-  // belly
-  ctx.fillStyle = "#e8f2fa";
-  ctx.beginPath();
-  ctx.ellipse(r * 0.15, r * 0.22, r * 0.85, r * 0.34, 0.08, 0, Math.PI);
-  ctx.fill();
-  // dorsal
-  ctx.fillStyle = "#3d5a74";
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.15, -r * 0.55);
-  ctx.lineTo(r * 0.2, -r * 1.45);
-  ctx.lineTo(r * 0.55, -r * 0.4);
-  ctx.closePath();
-  ctx.fill();
-  // tail
-  ctx.fillStyle = "#4a6a86";
-  ctx.beginPath();
-  ctx.moveTo(-r * 1.2, 0);
-  ctx.lineTo(-r * 2.25, -r * 0.7);
-  ctx.lineTo(-r * 1.65, 0);
-  ctx.lineTo(-r * 2.15, r * 0.55);
-  ctx.closePath();
-  ctx.fill();
-  // gills
-  ctx.strokeStyle = "rgba(20,40,60,0.45)";
-  ctx.lineWidth = 1.4;
-  for (let i = 0; i < 3; i += 1) {
-    const gx = r * (0.35 + i * 0.14);
-    ctx.beginPath();
-    ctx.moveTo(gx, -r * 0.28);
-    ctx.quadraticCurveTo(gx + r * 0.1, 0, gx, r * 0.32);
-    ctx.stroke();
-  }
-  // scar
-  ctx.strokeStyle = "rgba(255,255,255,0.28)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.2, -r * 0.15);
-  ctx.lineTo(r * 0.35, r * 0.05);
-  ctx.stroke();
-  drawCartoonEye(r * 0.75, -r * 0.14, r * 0.2, { iris: "#101820", pupil: 0.55 });
-  // teeth row
-  ctx.fillStyle = "#fffaf2";
-  for (let i = 0; i < 5; i += 1) {
-    const tx = r * 1.05 + i * r * 0.1;
-    ctx.beginPath();
-    ctx.moveTo(tx, r * 0.08);
-    ctx.lineTo(tx + r * 0.05, r * 0.28);
-    ctx.lineTo(tx + r * 0.1, r * 0.06);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // snout tip
-  ctx.fillStyle = "#9bb8d0";
-  ctx.beginPath();
-  ctx.ellipse(r * 1.55, 0, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (artDraw("drawSharkHunter", hunter, alpha)) return;
 }
 
 function drawRayHunter(hunter, alpha = 1) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r;
-  const flap = Math.sin(hunter.weave || 0) * 0.22;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle);
-  ctx.globalAlpha = alpha;
-  // whip tail
-  ctx.strokeStyle = "#3a9a96";
-  ctx.lineWidth = Math.max(2, r * 0.18);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-r * 1.2, 0);
-  ctx.quadraticCurveTo(-r * 2.1, Math.sin(hunter.weave || 0) * r * 0.4, -r * 2.9, Math.cos(hunter.weave || 0) * r * 0.25);
-  ctx.stroke();
-  ctx.fillStyle = "#2f7f7c";
-  ctx.beginPath();
-  ctx.moveTo(-r * 2.85, Math.cos(hunter.weave || 0) * r * 0.25);
-  ctx.lineTo(-r * 3.2, Math.cos(hunter.weave || 0) * r * 0.25 - r * 0.18);
-  ctx.lineTo(-r * 3.05, Math.cos(hunter.weave || 0) * r * 0.25 + r * 0.12);
-  ctx.closePath();
-  ctx.fill();
-  // wings
-  const rayGrad = ctx.createRadialGradient(r * 0.2, 0, r * 0.1, 0, 0, r * 1.6);
-  rayGrad.addColorStop(0, "#b8fff8");
-  rayGrad.addColorStop(0.4, "#5ec4c0");
-  rayGrad.addColorStop(1, "#2f7f7c");
-  ctx.fillStyle = rayGrad;
-  ctx.beginPath();
-  ctx.moveTo(r * 1.55, 0);
-  ctx.quadraticCurveTo(r * 0.15, -r * (1.45 + flap), -r * 1.15, -r * 0.18);
-  ctx.lineTo(-r * 1.55, 0);
-  ctx.lineTo(-r * 1.15, r * 0.18);
-  ctx.quadraticCurveTo(r * 0.15, r * (1.45 + flap), r * 1.55, 0);
-  ctx.closePath();
-  ctx.fill();
-  // wing veins
-  ctx.strokeStyle = "rgba(20,80,75,0.28)";
-  ctx.lineWidth = 1.3;
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(r * 0.7, 0);
-    ctx.quadraticCurveTo(r * 0.1, side * r * (0.9 + flap * 0.5), -r * 0.7, side * r * 0.1);
-    ctx.stroke();
-  }
-  // spots
-  ctx.fillStyle = "rgba(255,255,255,0.28)";
-  for (const [sx, sy, sr] of [
-    [-0.2, -0.45, 0.12],
-    [0.25, 0.4, 0.1],
-    [-0.45, 0.35, 0.08],
-    [0.05, -0.15, 0.07],
-  ]) {
-    ctx.beginPath();
-    ctx.ellipse(r * sx, r * sy * (1 + flap * 0.3), r * sr, r * sr * 0.7, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // belly plate
-  ctx.fillStyle = "rgba(230,255,252,0.8)";
-  ctx.beginPath();
-  ctx.ellipse(r * 0.35, 0, r * 0.55, r * 0.22, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawCartoonEye(r * 0.85, -r * 0.1, r * 0.13, { iris: "#0c2030", angry: true, pupil: 0.5 });
-  drawCartoonEye(r * 0.85, r * 0.1, r * 0.13, { iris: "#0c2030", angry: false, pupil: 0.5, lookY: -r * 0.02 });
-  // tiny smile
-  ctx.strokeStyle = "#0c2030";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.arc(r * 1.2, 0, r * 0.14, 0.2, Math.PI - 0.2);
-  ctx.stroke();
-  ctx.restore();
+  if (artDraw("drawRayHunter", hunter, alpha)) return;
 }
 
 function drawGhostHunter(hunter, alpha = 1) {
-  const angle = Math.atan2(hunter.vy || 0.001, hunter.vx || 0.001);
-  const r = hunter.r;
-  const a = alpha * (hunter.phaseAlpha ?? 0.7);
-  const wob = Math.sin(hunter.pulse || 0) * r * 0.08;
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(angle);
-  ctx.globalAlpha = a * 0.35;
-  // trailing wisps
-  for (let i = 0; i < 3; i += 1) {
-    ctx.fillStyle = `rgba(190,210,255,${0.35 - i * 0.1})`;
-    ctx.beginPath();
-    ctx.ellipse(-r * (1.3 + i * 0.45), wob * (i + 1) * 0.3, r * (0.55 - i * 0.1), r * (0.35 - i * 0.05), 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = a;
-  const ghostGrad = ctx.createRadialGradient(-r * 0.1, -r * 0.15, r * 0.1, 0, 0, r * 1.3);
-  ghostGrad.addColorStop(0, "rgba(245,250,255,0.95)");
-  ghostGrad.addColorStop(0.55, "rgba(180,205,255,0.8)");
-  ghostGrad.addColorStop(1, "rgba(90,120,180,0.2)");
-  ctx.fillStyle = ghostGrad;
-  ctx.beginPath();
-  ctx.moveTo(r * 1.15, 0);
-  ctx.quadraticCurveTo(r * 0.4, -r * 0.95, -r * 1.0, -r * 0.55);
-  ctx.quadraticCurveTo(-r * 1.35, 0, -r * 1.0, r * 0.55);
-  ctx.quadraticCurveTo(r * 0.4, r * 0.95, r * 1.15, 0);
-  ctx.closePath();
-  ctx.fill();
-  // dashed halo
-  ctx.strokeStyle = "rgba(230,240,255,0.75)";
-  ctx.lineWidth = 1.6;
-  ctx.setLineDash([4, 5]);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 1.4, r * 0.9, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  // hollow eyes
-  ctx.fillStyle = "#f7fbff";
-  ctx.beginPath();
-  ctx.ellipse(r * 0.35, -r * 0.12, r * 0.2, r * 0.24, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(r * 0.35, r * 0.18, r * 0.16, r * 0.2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#1a2848";
-  ctx.beginPath();
-  ctx.arc(r * 0.42, -r * 0.1, r * 0.09, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(r * 0.4, r * 0.2, r * 0.07, 0, Math.PI * 2);
-  ctx.fill();
-  // mouth swoosh
-  ctx.strokeStyle = "rgba(40,60,100,0.55)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(r * 0.75, r * 0.05, r * 0.2, 0.4, Math.PI - 0.2);
-  ctx.stroke();
-  ctx.restore();
+  if (artDraw("drawGhostHunter", hunter, alpha)) return;
+}
+
+function drawCrabHunter(hunter, alpha = 1) {
+  if (artDraw("drawCrabHunter", hunter, alpha)) return;
+}
+
+function drawUrchinHunter(hunter, alpha = 1) {
+  if (artDraw("drawUrchinHunter", hunter, alpha)) return;
+}
+
+function drawMirrorHunter(hunter, alpha = 1) {
+  if (artDraw("drawMirrorHunter", hunter, alpha)) return;
 }
 
 function drawBossHunter(hunter, alpha = 1) {
-  const pulse = hunter.pulse || 0;
-  const aim = Math.atan2(hunter.vy || 0.01, hunter.vx || 0.01);
-  const s = hunter.r;
-  const body = hunter.kraken ? "#251538" : "#1a2a44";
-  const accent = hunter.bossPhase === "telegraph" || hunter.bossPhase === "charge"
-    ? "#ff6b7a"
-    : hunter.bossPhase === "ink_burst"
-      ? "#c184ff"
-      : hunter.kraken ? "#9a78e8" : "#7ab8ff";
-  ctx.save();
-  ctx.translate(hunter.x, hunter.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha * 0.35;
-  const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2.6);
-  glow.addColorStop(0, mixColor(accent, "#ffffff", 0.25));
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, s * 2.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = alpha;
-  // segmented serpent body
-  for (let i = 5; i >= 0; i -= 1) {
-    const t = -s * (0.15 + i * 0.42);
-    const wob = Math.sin(pulse * 2.2 + i * 0.9) * s * 0.14;
-    const rr = s * (0.95 - i * 0.08);
-    const seg = ctx.createRadialGradient(t, wob - rr * 0.2, rr * 0.1, t, wob, rr);
-    seg.addColorStop(0, mixColor(accent, "#ffffff", 0.25));
-    seg.addColorStop(0.45, mixColor(body, accent, 0.25));
-    seg.addColorStop(1, mixColor(body, "#000000", 0.25));
-    ctx.fillStyle = seg;
-    ctx.beginPath();
-    ctx.ellipse(t, wob, rr * 1.15, rr * 0.72, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // scale marks
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(t + rr * 0.15, wob, rr * 0.45, -0.8, 0.8);
-    ctx.stroke();
-    // side fins on some segments
-    if (i === 1 || i === 3) {
-      ctx.fillStyle = mixColor(accent, body, 0.4);
-      ctx.beginPath();
-      ctx.moveTo(t, wob - rr * 0.5);
-      ctx.lineTo(t - rr * 0.2, wob - rr * 1.15);
-      ctx.lineTo(t + rr * 0.35, wob - rr * 0.35);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-  if (hunter.kraken) {
-    ctx.strokeStyle = mixColor(accent, "#ffffff", 0.1);
-    ctx.lineWidth = s * 0.13;
-    ctx.lineCap = "round";
-    for (let i = -2; i <= 2; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.4, i * s * 0.22);
-      ctx.quadraticCurveTo(-s * 1.4, i * s * 0.5 + Math.sin(pulse * 2 + i) * s, -s * 2.1, i * s * 0.68);
-      ctx.stroke();
-    }
-  }
-  // head crest / horns
-  ctx.fillStyle = mixColor(accent, "#120818", 0.25);
-  ctx.beginPath();
-  ctx.moveTo(s * 0.2, -s * 0.45);
-  ctx.lineTo(s * 0.55, -s * 1.15);
-  ctx.lineTo(s * 0.75, -s * 0.35);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(s * 0.35, s * 0.35);
-  ctx.lineTo(s * 0.7, s * 0.95);
-  ctx.lineTo(s * 0.85, s * 0.25);
-  ctx.closePath();
-  ctx.fill();
-  // jaws
-  ctx.fillStyle = mixColor(accent, "#120818", 0.35);
-  ctx.beginPath();
-  ctx.moveTo(s * 0.85, -s * 0.28);
-  ctx.lineTo(s * 1.7, -s * 0.08);
-  ctx.lineTo(s * 0.95, s * 0.05);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(s * 0.85, s * 0.28);
-  ctx.lineTo(s * 1.65, s * 0.12);
-  ctx.lineTo(s * 0.95, -s * 0.02);
-  ctx.closePath();
-  ctx.fill();
-  // teeth
-  ctx.fillStyle = "#fff8f0";
-  for (let i = 0; i < 3; i += 1) {
-    const tx = s * (1.05 + i * 0.15);
-    ctx.beginPath();
-    ctx.moveTo(tx, -s * 0.02);
-    ctx.lineTo(tx + s * 0.06, s * 0.14);
-    ctx.lineTo(tx + s * 0.12, -s * 0.01);
-    ctx.closePath();
-    ctx.fill();
-  }
-  drawCartoonEye(s * 0.35, -s * 0.12, s * 0.16, {
-    iris: "#120818",
-    white: mixColor("#ffffff", accent, 0.15),
-    pupil: 0.55,
-  });
-  // glowing pupil ring
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = alpha * 0.7;
-  ctx.beginPath();
-  ctx.arc(s * 0.4, -s * 0.1, s * 0.1, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-
-  if ((hunter.bossPhase === "telegraph" || hunter.bossPhase === "charge" || hunter.bossPhase === "ink_burst") && !inInkDive()) {
-    const ring = hunter.bossPhase === "charge"
-      ? s * (1.4 + (1 - (hunter.bossTimer || 0) / 0.55) * 0.8)
-      : hunter.bossPhase === "ink_burst"
-        ? s * (2.2 + Math.sin(state.time * 5) * 0.25)
-      : s * (1.8 + (1 - (hunter.bossTimer || 0) / 0.85) * 1.4);
-    ctx.save();
-    ctx.globalAlpha = hunter.bossPhase === "telegraph" ? 0.55 : 0.35;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = hunter.bossPhase === "telegraph" ? 3 : 2;
-    ctx.beginPath();
-    ctx.arc(hunter.x, hunter.y, ring, 0, Math.PI * 2);
-    ctx.stroke();
-    if (hunter.bossPhase === "telegraph") {
-      ctx.globalAlpha = 0.35;
-      ctx.setLineDash([8, 10]);
-      ctx.beginPath();
-      ctx.moveTo(hunter.x, hunter.y);
-      ctx.lineTo(hunter.chargeTx, hunter.chargeTy);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.restore();
-  }
+  if (artDraw("drawBossHunter", hunter, alpha)) return;
 }
 
 function drawHeroAura() {
@@ -8674,6 +8114,9 @@ function drawHunter(hunter) {
   else if (species === "shark") drawSharkHunter(hunter, alpha);
   else if (species === "ray") drawRayHunter(hunter, alpha);
   else if (species === "ghost") drawGhostHunter(hunter, alpha);
+  else if (species === "crab") drawCrabHunter(hunter, alpha);
+  else if (species === "urchin") drawUrchinHunter(hunter, alpha);
+  else if (species === "mirror") drawMirrorHunter(hunter, alpha);
   else drawEvilFish(hunter, alpha, false);
   if (hunter.warn > 0 && !inInkDive() && species !== "boss" && !hunter.boss) {
     ctx.save();
@@ -8683,6 +8126,9 @@ function drawHunter(hunter) {
       : species === "jelly" ? "#ff7ab8"
       : species === "ray" ? "#7ef0ea"
       : species === "ghost" ? "#c8d8ff"
+      : species === "crab" ? "#ff9a62"
+      : species === "urchin" ? "#9be7ff"
+      : species === "mirror" ? "#c8f0ff"
       : cssVar("--danger", "#ff6888");
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -8714,452 +8160,33 @@ function drawHeroEyes(s, wob, alpha, eyeY = 0) {
 }
 
 function drawJellyfish(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accentB = cssVar("--accent-b", "#7affd4");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r;
-  const wob = body.wobble;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.lineCap = "round";
-  for (let i = 0; i < 7; i += 1) {
-    const spread = (i - 3) * 0.22;
-    const len = s * (1.35 + Math.sin(wob + i) * 0.2);
-    ctx.globalAlpha = alpha * (0.35 + (i % 3) * 0.1);
-    ctx.strokeStyle = mixColor(ink, accentB, 0.35);
-    ctx.lineWidth = Math.max(1.4, s * 0.08);
-    ctx.beginPath();
-    ctx.moveTo(s * 0.05, spread * s * 0.35);
-    ctx.quadraticCurveTo(-s * 0.35, spread * s * 0.9, -len, spread * s * 1.1 + Math.sin(wob * 1.4 + i) * s * 0.2);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = alpha;
-  const bell = ctx.createRadialGradient(s * 0.1, 0, s * 0.1, 0, 0, s);
-  bell.addColorStop(0, mixColor(ink, "#ffffff", 0.45));
-  bell.addColorStop(0.55, mixColor(ink, accentB, 0.2));
-  bell.addColorStop(1, mixColor(ink, "#1a2848", 0.25));
-  ctx.fillStyle = bell;
-  ctx.beginPath();
-  ctx.ellipse(s * 0.08, 0, s * 0.85, s * 0.7, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawHeroEyes(s, wob, alpha, -s * 0.05);
-  ctx.restore();
+  if (artDraw("drawJellyfish", body, alpha)) return;
 }
 
 function drawTurtle(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accent = cssVar("--accent-a", "#ff9a62");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r;
-  const wob = body.wobble;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = mixColor(ink, accent, 0.2);
-  for (const [fx, fy, fr] of [
-    [s * 0.85, 0, s * 0.28],
-    [-s * 0.55, -s * 0.45, s * 0.22],
-    [-s * 0.55, s * 0.45, s * 0.22],
-    [-s * 0.95, 0, s * 0.2],
-  ]) {
-    ctx.beginPath();
-    ctx.ellipse(fx, fy + Math.sin(wob + fx) * s * 0.03, fr, fr * 0.72, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = mixColor(ink, "#2a4030", 0.35);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 0.95, s * 0.72, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = mixColor(ink, "#102018", 0.4);
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.35, 0);
-  ctx.lineTo(s * 0.35, 0);
-  ctx.moveTo(0, -s * 0.35);
-  ctx.lineTo(0, s * 0.35);
-  ctx.stroke();
-  ctx.fillStyle = mixColor(ink, accent, 0.15);
-  ctx.beginPath();
-  ctx.ellipse(s * 0.72, 0, s * 0.34, s * 0.28, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawHeroEyes(s * 0.85, wob, alpha, 0);
-  ctx.restore();
+  if (artDraw("drawTurtle", body, alpha)) return;
 }
 
 function drawCrab(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accent = cssVar("--accent-a", "#ff9a62");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r;
-  const wob = body.wobble;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = mixColor(ink, accent, 0.25);
-  ctx.lineWidth = Math.max(2, s * 0.12);
-  ctx.lineCap = "round";
-  for (const side of [-1, 1]) {
-    const clawX = s * 0.7;
-    const clawY = side * s * 0.55;
-    ctx.beginPath();
-    ctx.moveTo(s * 0.2, side * s * 0.2);
-    ctx.quadraticCurveTo(s * 0.55, clawY, clawX, clawY);
-    ctx.stroke();
-    ctx.fillStyle = mixColor(ink, accent, 0.2);
-    ctx.beginPath();
-    ctx.ellipse(clawX + s * 0.08, clawY, s * 0.22, s * 0.14, side * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  for (let i = 0; i < 3; i += 1) {
-    for (const side of [-1, 1]) {
-      const lx = -s * (0.1 + i * 0.18);
-      const ly = side * s * (0.45 + i * 0.05);
-      ctx.beginPath();
-      ctx.moveTo(lx + s * 0.2, side * s * 0.1);
-      ctx.lineTo(lx - s * 0.15, ly + Math.sin(wob + i) * s * 0.08);
-      ctx.stroke();
-    }
-  }
-  ctx.fillStyle = mixColor(ink, accent, 0.18);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 0.78, s * 0.58, 0, 0, Math.PI * 2);
-  ctx.fill();
-  drawHeroEyes(s, wob, alpha, -s * 0.05);
-  ctx.restore();
+  if (artDraw("drawCrab", body, alpha)) return;
 }
 
 
 function drawManta(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accent = cssVar("--accent-b", "#7affd4");
-  const foam = cssVar("--foam", "#f3eee8");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.08;
-  const wob = body.wobble || 0;
-  const flap = Math.sin(wob * 1.8) * 0.34;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2.1);
-  glow.addColorStop(0, "rgba(122,255,212,0.28)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 2.0, s * 1.35, 0, 0, Math.PI * 2);
-  ctx.fill();
-  const wing = ctx.createLinearGradient(0, -s * 1.4, 0, s * 1.4);
-  wing.addColorStop(0, mixColor(ink, accent, 0.45));
-  wing.addColorStop(0.45, mixColor(ink, "#1a3048", 0.2));
-  wing.addColorStop(1, mixColor(ink, accent, 0.3));
-  ctx.fillStyle = wing;
-  ctx.beginPath();
-  ctx.moveTo(s * 1.15, 0);
-  ctx.quadraticCurveTo(s * 0.25, -s * (1.35 + flap), -s * 0.55, -s * 0.55);
-  ctx.quadraticCurveTo(-s * 1.2, -s * 0.1, -s * 1.45, 0);
-  ctx.quadraticCurveTo(-s * 1.2, s * 0.1, -s * 0.55, s * 0.55);
-  ctx.quadraticCurveTo(s * 0.25, s * (1.35 + flap), s * 1.15, 0);
-  ctx.fill();
-  // belly
-  ctx.fillStyle = mixColor(foam, accent, 0.2);
-  ctx.globalAlpha = alpha * 0.85;
-  ctx.beginPath();
-  ctx.ellipse(s * 0.1, 0, s * 0.55, s * 0.32, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = alpha;
-  // cephalic fins
-  ctx.strokeStyle = mixColor(accent, "#fff", 0.25);
-  ctx.lineWidth = Math.max(1.5, s * 0.08);
-  ctx.beginPath();
-  ctx.moveTo(s * 0.85, -s * 0.18);
-  ctx.quadraticCurveTo(s * 1.25, -s * 0.55, s * 1.45, -s * 0.1);
-  ctx.moveTo(s * 0.85, s * 0.18);
-  ctx.quadraticCurveTo(s * 1.25, s * 0.55, s * 1.45, s * 0.1);
-  ctx.stroke();
-  // spots
-  ctx.fillStyle = "rgba(255,255,255,0.18)";
-  for (let i = 0; i < 6; i += 1) {
-    ctx.beginPath();
-    ctx.arc(-s * 0.1 + (i % 3) * s * 0.28, ((i < 3 ? -1 : 1) * s * 0.28), s * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // whip tail
-  ctx.strokeStyle = mixColor(ink, accent, 0.35);
-  ctx.lineWidth = Math.max(1.8, s * 0.1);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-s * 1.35, 0);
-  ctx.quadraticCurveTo(-s * 1.9, Math.sin(wob * 3) * s * 0.35, -s * 2.35, Math.sin(wob * 2) * s * 0.15);
-  ctx.stroke();
-  drawHeroEyes(s * 0.75, wob, alpha, -s * 0.05);
-  ctx.restore();
+  if (artDraw("drawManta", body, alpha)) return;
 }
 
 function drawAngler(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const gold = cssVar("--gold", "#ffe898");
-  const deep = "#142238";
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.05;
-  const wob = body.wobble || 0;
-  const pulse = 0.55 + 0.45 * Math.sin(wob * 4);
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  // lure glow
-  const lureX = s * 1.42;
-  const lureY = -s * 0.08;
-  const lg = ctx.createRadialGradient(lureX, lureY, 0, lureX, lureY, s * 1.1);
-  lg.addColorStop(0, `rgba(255,230,150,${0.55 * pulse})`);
-  lg.addColorStop(0.45, `rgba(255,180,80,${0.18 * pulse})`);
-  lg.addColorStop(1, "transparent");
-  ctx.fillStyle = lg;
-  ctx.beginPath();
-  ctx.arc(lureX, lureY, s * 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  // body
-  const grad = ctx.createLinearGradient(0, -s, 0, s);
-  grad.addColorStop(0, mixColor(deep, gold, 0.15));
-  grad.addColorStop(1, mixColor(ink, deep, 0.35));
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(s * 0.95, 0);
-  ctx.quadraticCurveTo(s * 0.4, -s * 0.85, -s * 0.55, -s * 0.55);
-  ctx.quadraticCurveTo(-s * 1.15, 0, -s * 0.45, s * 0.7);
-  ctx.quadraticCurveTo(s * 0.35, s * 0.85, s * 0.95, 0);
-  ctx.fill();
-  // teeth
-  ctx.fillStyle = "#fff6e0";
-  for (let i = 0; i < 4; i += 1) {
-    const tx = s * (0.35 + i * 0.14);
-    ctx.beginPath();
-    ctx.moveTo(tx, s * 0.18);
-    ctx.lineTo(tx + s * 0.05, s * 0.42);
-    ctx.lineTo(tx + s * 0.1, s * 0.18);
-    ctx.fill();
-  }
-  // dorsal spikes
-  ctx.fillStyle = mixColor(deep, gold, 0.25);
-  for (let i = 0; i < 3; i += 1) {
-    const sx = -s * 0.2 + i * s * 0.28;
-    ctx.beginPath();
-    ctx.moveTo(sx, -s * 0.45);
-    ctx.lineTo(sx + s * 0.1, -s * 0.95);
-    ctx.lineTo(sx + s * 0.2, -s * 0.4);
-    ctx.fill();
-  }
-  // rod
-  ctx.strokeStyle = mixColor(ink, gold, 0.45);
-  ctx.lineWidth = Math.max(2, s * 0.11);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(s * 0.5, -s * 0.25);
-  ctx.quadraticCurveTo(s * 1.05, -s * 1.05, lureX, lureY);
-  ctx.stroke();
-  ctx.fillStyle = gold;
-  ctx.beginPath();
-  ctx.arc(lureX, lureY, s * 0.18 * (0.9 + pulse * 0.2), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,240,0.9)";
-  ctx.beginPath();
-  ctx.arc(lureX - s * 0.04, lureY - s * 0.04, s * 0.07, 0, Math.PI * 2);
-  ctx.fill();
-  drawHeroEyes(s * 0.55, wob, alpha, -s * 0.12);
-  ctx.restore();
+  if (artDraw("drawAngler", body, alpha)) return;
 }
 
 function drawNautilus(body, alpha = 1) {
-  const ink = lifeInkColor();
-  const accent = cssVar("--accent-a", "#ff9a62");
-  const pearl = "#ffe8d0";
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.1;
-  const wob = body.wobble || 0;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim + Math.sin(wob * 0.6) * 0.05);
-  ctx.globalAlpha = alpha;
-  const glow = ctx.createRadialGradient(-s * 0.1, 0, s * 0.2, -s * 0.1, 0, s * 1.7);
-  glow.addColorStop(0, "rgba(255,154,98,0.25)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(-s * 0.1, 0, s * 1.7, 0, Math.PI * 2);
-  ctx.fill();
-  const shell = ctx.createRadialGradient(-s * 0.2, -s * 0.1, s * 0.1, -s * 0.1, 0, s);
-  shell.addColorStop(0, mixColor(pearl, accent, 0.35));
-  shell.addColorStop(0.55, mixColor(ink, accent, 0.4));
-  shell.addColorStop(1, mixColor(ink, "#3a2018", 0.3));
-  ctx.fillStyle = shell;
-  ctx.beginPath();
-  ctx.arc(-s * 0.08, 0, s * 0.98, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = mixColor(pearl, accent, 0.5);
-  ctx.lineWidth = Math.max(1.6, s * 0.08);
-  ctx.beginPath();
-  for (let i = 0; i < 5; i += 1) {
-    const r = s * (0.28 + i * 0.14);
-    ctx.moveTo(-s * 0.08 + r, 0);
-    ctx.arc(-s * 0.08, 0, r, 0, Math.PI * 1.55);
-  }
-  ctx.stroke();
-  // rim
-  ctx.strokeStyle = mixColor(accent, "#fff", 0.25);
-  ctx.lineWidth = Math.max(2, s * 0.1);
-  ctx.beginPath();
-  ctx.arc(-s * 0.08, 0, s * 0.98, 0, Math.PI * 2);
-  ctx.stroke();
-  // tentacles
-  ctx.strokeStyle = mixColor(ink, accent, 0.35);
-  ctx.lineWidth = Math.max(1.8, s * 0.1);
-  ctx.lineCap = "round";
-  for (let i = 0; i < 5; i += 1) {
-    const a = -0.7 + i * 0.35;
-    ctx.beginPath();
-    ctx.moveTo(s * 0.55, Math.sin(a) * s * 0.15);
-    ctx.quadraticCurveTo(s * 1.05, Math.sin(a + wob) * s * 0.55, s * 1.4, Math.sin(a * 1.3 + wob) * s * 0.7);
-    ctx.stroke();
-  }
-  ctx.fillStyle = mixColor(ink, pearl, 0.25);
-  ctx.beginPath();
-  ctx.ellipse(s * 0.55, 0, s * 0.35, s * 0.42, 0.15, 0, Math.PI * 2);
-  ctx.fill();
-  drawHeroEyes(s * 0.7, wob, alpha, 0);
-  ctx.restore();
+  if (artDraw("drawNautilus", body, alpha)) return;
 }
 
 
 function drawSubmarine(body, alpha = 1) {
-  const brass = "#d4a574";
-  const brassLite = "#ffe0b0";
-  const hull = "#1a3a52";
-  const hullDeep = "#0c2236";
-  const teal = cssVar("--life", "#7affd4");
-  const gold = cssVar("--gold", "#ffe898");
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.18;
-  const wob = body.wobble || 0;
-  const prop = Math.sin(wob * 4.2);
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-
-  // soft glow under hull
-  const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.8);
-  glow.addColorStop(0, "rgba(255, 200, 120, 0.22)");
-  glow.addColorStop(0.55, "rgba(90, 180, 200, 0.1)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 1.7, s * 1.05, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // twin props
-  ctx.fillStyle = brass;
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    ctx.ellipse(-s * 1.15, side * s * 0.28, s * 0.18, s * 0.08 + Math.abs(prop) * s * 0.1, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // main hull
-  const bodyGrad = ctx.createLinearGradient(0, -s, 0, s);
-  bodyGrad.addColorStop(0, mixColor(hull, teal, 0.18));
-  bodyGrad.addColorStop(0.45, hull);
-  bodyGrad.addColorStop(1, hullDeep);
-  ctx.fillStyle = bodyGrad;
-  ctx.beginPath();
-  ctx.moveTo(s * 1.35, 0);
-  ctx.quadraticCurveTo(s * 0.9, -s * 0.72, 0, -s * 0.62);
-  ctx.quadraticCurveTo(-s * 0.85, -s * 0.55, -s * 1.05, -s * 0.18);
-  ctx.quadraticCurveTo(-s * 1.18, 0, -s * 1.05, s * 0.18);
-  ctx.quadraticCurveTo(-s * 0.85, s * 0.55, 0, s * 0.62);
-  ctx.quadraticCurveTo(s * 0.9, s * 0.72, s * 1.35, 0);
-  ctx.fill();
-
-  // brass keel stripe
-  ctx.strokeStyle = mixColor(brass, gold, 0.35);
-  ctx.lineWidth = Math.max(1.5, s * 0.08);
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.95, 0);
-  ctx.quadraticCurveTo(0, s * 0.08, s * 1.15, 0);
-  ctx.stroke();
-
-  // conning tower
-  ctx.fillStyle = mixColor(hull, brass, 0.2);
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.15, -s * 0.55);
-  ctx.lineTo(s * 0.35, -s * 0.55);
-  ctx.lineTo(s * 0.28, -s * 1.05);
-  ctx.lineTo(-s * 0.05, -s * 1.05);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = brass;
-  ctx.fillRect(-s * 0.02, -s * 1.28, s * 0.08, s * 0.28);
-  ctx.beginPath();
-  ctx.arc(s * 0.02, -s * 1.32, s * 0.07, 0, Math.PI * 2);
-  ctx.fill();
-
-  // portholes
-  for (let i = 0; i < 3; i += 1) {
-    const px = s * (0.15 + i * 0.32);
-    const py = -s * 0.08;
-    ctx.fillStyle = "rgba(20, 40, 60, 0.9)";
-    ctx.beginPath();
-    ctx.arc(px, py, s * 0.14, 0, Math.PI * 2);
-    ctx.fill();
-    const win = ctx.createRadialGradient(px - s * 0.03, py - s * 0.03, 0, px, py, s * 0.14);
-    win.addColorStop(0, "rgba(180, 240, 255, 0.85)");
-    win.addColorStop(0.55, "rgba(90, 180, 220, 0.45)");
-    win.addColorStop(1, "rgba(30, 60, 90, 0.2)");
-    ctx.fillStyle = win;
-    ctx.beginPath();
-    ctx.arc(px, py, s * 0.11, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = brassLite;
-    ctx.lineWidth = Math.max(1, s * 0.04);
-    ctx.stroke();
-  }
-
-  // twin cannons
-  ctx.fillStyle = mixColor(brass, "#8a6040", 0.25);
-  for (const side of [-1, 1]) {
-    ctx.save();
-    ctx.translate(s * 0.55, side * s * 0.42);
-    ctx.rotate(side * 0.12);
-    ctx.fillRect(0, -s * 0.07, s * 0.7, s * 0.14);
-    ctx.beginPath();
-    ctx.arc(s * 0.7, 0, s * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = gold;
-    ctx.globalAlpha = alpha * (0.45 + Math.sin(wob * 6 + side) * 0.2);
-    ctx.beginPath();
-    ctx.arc(s * 0.78, 0, s * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // rivets
-  ctx.fillStyle = mixColor(brassLite, "#fff", 0.2);
-  for (let i = 0; i < 5; i += 1) {
-    ctx.beginPath();
-    ctx.arc(-s * 0.55 + i * s * 0.28, s * 0.38, s * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // bow lantern
-  ctx.fillStyle = gold;
-  ctx.globalAlpha = alpha * (0.7 + Math.sin(wob * 5) * 0.25);
-  ctx.beginPath();
-  ctx.arc(s * 1.28, -s * 0.12, s * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
+  if (artDraw("drawSubmarine", body, alpha)) return;
 }
 
 
@@ -9210,308 +8237,27 @@ function drawShots() {
 }
 
 function drawEel(body, alpha = 1) {
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r;
-  const wob = body.wobble || 0;
-  const teal = "#7ad7ff";
-  const deep = "#123a58";
-  const gold = cssVar("--gold", "#ffe898");
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  const glow = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2);
-  glow.addColorStop(0, `rgba(140,220,255,${0.4 + Math.sin(wob * 5) * 0.1})`);
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, s * 2, 0, Math.PI * 2);
-  ctx.fill();
-  // segmented body
-  const pts = [];
-  for (let i = 0; i <= 10; i += 1) {
-    const t = i / 10;
-    const x = -s * 1.35 + t * s * 2.7;
-    const y = Math.sin(wob * 3.2 + t * 4.2) * s * (0.35 + t * 0.15);
-    pts.push([x, y]);
-  }
-  ctx.strokeStyle = mixColor(teal, deep, 0.25);
-  ctx.lineWidth = Math.max(4.5, s * 0.55);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-  ctx.stroke();
-  // electric bands
-  ctx.strokeStyle = `rgba(255,255,200,${0.35 + Math.sin(wob * 8) * 0.2})`;
-  ctx.lineWidth = Math.max(1.2, s * 0.08);
-  for (let i = 1; i < pts.length - 1; i += 2) {
-    const [x, y] = pts[i];
-    ctx.beginPath();
-    ctx.moveTo(x, y - s * 0.22);
-    ctx.lineTo(x, y + s * 0.22);
-    ctx.stroke();
-  }
-  // head
-  const head = pts[pts.length - 1];
-  const hg = ctx.createRadialGradient(head[0], head[1], 0, head[0], head[1], s * 0.42);
-  hg.addColorStop(0, mixColor(teal, "#fff", 0.35));
-  hg.addColorStop(1, deep);
-  ctx.fillStyle = hg;
-  ctx.beginPath();
-  ctx.ellipse(head[0] + s * 0.08, head[1], s * 0.38, s * 0.28, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = gold;
-  ctx.globalAlpha = alpha * (0.5 + Math.sin(wob * 6) * 0.3);
-  ctx.beginPath();
-  ctx.arc(head[0] + s * 0.28, head[1] - s * 0.05, s * 0.08, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#fffef8";
-  ctx.beginPath();
-  ctx.arc(head[0] + s * 0.18, head[1] - s * 0.08, s * 0.07, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#102030";
-  ctx.beginPath();
-  ctx.arc(head[0] + s * 0.2, head[1] - s * 0.08, s * 0.03, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (artDraw("drawEel", body, alpha)) return;
 }
 
 function drawSquid(body, alpha = 1) {
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.05;
-  const wob = body.wobble || 0;
-  const ink = "#4a3a78";
-  const lite = "#d2c4ff";
-  const ready = state.squidInkReady;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  if (ready) {
-    const g = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.8);
-    g.addColorStop(0, "rgba(180,140,255,0.28)");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(0, 0, s * 1.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  const mantle = ctx.createLinearGradient(0, -s, 0, s);
-  mantle.addColorStop(0, mixColor(lite, "#fff", 0.2));
-  mantle.addColorStop(0.5, mixColor(ink, lite, 0.35));
-  mantle.addColorStop(1, ink);
-  ctx.fillStyle = mantle;
-  ctx.beginPath();
-  ctx.ellipse(s * 0.2, 0, s * 0.95, s * 0.72, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // fins
-  ctx.fillStyle = mixColor(ink, lite, 0.4);
-  ctx.beginPath();
-  ctx.ellipse(s * 0.05, -s * 0.7, s * 0.45, s * 0.22, -0.4, 0, Math.PI * 2);
-  ctx.ellipse(s * 0.05, s * 0.7, s * 0.45, s * 0.22, 0.4, 0, Math.PI * 2);
-  ctx.fill();
-  // speckles
-  ctx.fillStyle = "rgba(255,255,255,0.16)";
-  for (let i = 0; i < 8; i += 1) {
-    ctx.beginPath();
-    ctx.arc(s * (0.1 + (i % 4) * 0.2), ((i < 4 ? -1 : 1) * s * 0.22), s * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // eyes
-  ctx.fillStyle = "#f4f0ff";
-  ctx.beginPath();
-  ctx.ellipse(s * 0.55, -s * 0.18, s * 0.2, s * 0.16, 0, 0, Math.PI * 2);
-  ctx.ellipse(s * 0.55, s * 0.18, s * 0.2, s * 0.16, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#1a1030";
-  ctx.beginPath();
-  ctx.arc(s * 0.62, -s * 0.18, s * 0.07, 0, Math.PI * 2);
-  ctx.arc(s * 0.62, s * 0.18, s * 0.07, 0, Math.PI * 2);
-  ctx.fill();
-  // tentacles with suckers
-  for (let i = 0; i < 6; i += 1) {
-    const a = -1.0 + i * 0.4;
-    ctx.strokeStyle = mixColor(ink, lite, 0.45);
-    ctx.lineWidth = Math.max(2.2, s * 0.12);
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    const x1 = -s * 0.35;
-    const y1 = Math.sin(a) * s * 0.2;
-    const x2 = -s * 1.45;
-    const y2 = Math.sin(a * 1.4 + wob) * s * 1.05;
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo(-s * 0.9, Math.sin(a + wob) * s * 0.7, x2, y2);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(255,200,220,0.45)";
-    for (let k = 0; k < 3; k += 1) {
-      const t = 0.35 + k * 0.2;
-      const sx = x1 + (x2 - x1) * t;
-      const sy = y1 + (y2 - y1) * t;
-      ctx.beginPath();
-      ctx.arc(sx, sy, s * 0.05, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
+  if (artDraw("drawSquid", body, alpha)) return;
 }
 
 function drawSeahorse(body, alpha = 1) {
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.08;
-  const wob = body.wobble || 0;
-  const gold = cssVar("--gold", "#ffe898");
-  const coral = "#ff8b6a";
-  const ready = state.seahorseReady;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  if (ready) {
-    const g = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.9);
-    g.addColorStop(0, "rgba(255,220,140,0.3)");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(0, 0, s * 1.9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  const bodyG = ctx.createLinearGradient(0, -s, 0, s);
-  bodyG.addColorStop(0, mixColor(coral, gold, 0.45));
-  bodyG.addColorStop(1, mixColor(coral, "#7a3020", 0.25));
-  ctx.fillStyle = bodyG;
-  ctx.beginPath();
-  ctx.moveTo(s * 0.95, -s * 0.05);
-  ctx.quadraticCurveTo(s * 0.35, -s * 1.15, -s * 0.25, -s * 0.7);
-  ctx.quadraticCurveTo(-s * 0.95, -s * 0.1, -s * 0.35, s * 0.55);
-  ctx.quadraticCurveTo(s * 0.2, s * 1.05, s * 0.65, s * 0.25);
-  ctx.closePath();
-  ctx.fill();
-  // armor plates
-  ctx.strokeStyle = mixColor(gold, "#fff", 0.25);
-  ctx.lineWidth = Math.max(1.2, s * 0.07);
-  for (let i = 0; i < 4; i += 1) {
-    ctx.beginPath();
-    ctx.arc(-s * 0.05, s * 0.05, s * (0.35 + i * 0.14), -0.8, 1.2);
-    ctx.stroke();
-  }
-  // crest
-  ctx.fillStyle = gold;
-  for (let i = 0; i < 4; i += 1) {
-    const cx = -s * 0.05 + i * s * 0.18;
-    ctx.beginPath();
-    ctx.moveTo(cx, -s * 0.55);
-    ctx.lineTo(cx + s * 0.08, -s * 1.05);
-    ctx.lineTo(cx + s * 0.16, -s * 0.5);
-    ctx.fill();
-  }
-  // curled tail
-  ctx.strokeStyle = mixColor(coral, gold, 0.4);
-  ctx.lineWidth = Math.max(2.4, s * 0.14);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.15, s * 0.55);
-  ctx.quadraticCurveTo(-s * 0.7, s * 1.15 + Math.sin(wob) * s * 0.12, -s * 1.15, s * 0.75);
-  ctx.quadraticCurveTo(-s * 1.35, s * 0.35, -s * 1.05, s * 0.25);
-  ctx.stroke();
-  // snout
-  ctx.fillStyle = mixColor(coral, "#fff", 0.2);
-  ctx.beginPath();
-  ctx.ellipse(s * 0.95, -s * 0.12, s * 0.35, s * 0.12, 0.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#fff8ec";
-  ctx.beginPath();
-  ctx.arc(s * 0.45, -s * 0.35, s * 0.15, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#2a1810";
-  ctx.beginPath();
-  ctx.arc(s * 0.5, -s * 0.35, s * 0.06, 0, Math.PI * 2);
-  ctx.fill();
-  // time rings when ready
-  if (ready) {
-    ctx.strokeStyle = `rgba(255,220,140,${0.35 + Math.sin(wob * 3) * 0.15})`;
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.arc(0, 0, s * 1.35, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.restore();
+  if (artDraw("drawSeahorse", body, alpha)) return;
 }
 
 function drawWhale(body, alpha = 1) {
-  const aim = body.aim ?? -Math.PI / 2;
-  const s = body.r * 1.15;
-  const wob = body.wobble || 0;
-  const blue = "#6eb4e0";
-  const deep = "#1d3f5c";
-  const ready = (state.whaleCd || 0) <= 0;
-  ctx.save();
-  ctx.translate(body.x, body.y);
-  ctx.rotate(aim);
-  ctx.globalAlpha = alpha;
-  const aura = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2.1);
-  aura.addColorStop(0, `rgba(140,200,255,${ready ? 0.3 : 0.12})`);
-  aura.addColorStop(1, "transparent");
-  ctx.fillStyle = aura;
-  ctx.beginPath();
-  ctx.arc(0, 0, s * 2.1, 0, Math.PI * 2);
-  ctx.fill();
-  const grad = ctx.createLinearGradient(0, -s, 0, s);
-  grad.addColorStop(0, mixColor(blue, "#fff", 0.25));
-  grad.addColorStop(0.55, blue);
-  grad.addColorStop(1, deep);
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 1.4, s * 0.82, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // belly grooves
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 1.2;
-  for (let i = 0; i < 4; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.3, s * (0.15 + i * 0.12));
-    ctx.quadraticCurveTo(s * 0.4, s * (0.22 + i * 0.12), s * 1.0, s * (0.1 + i * 0.08));
-    ctx.stroke();
-  }
-  // pectoral fin
-  ctx.fillStyle = mixColor(blue, deep, 0.3);
-  ctx.beginPath();
-  ctx.moveTo(s * 0.1, s * 0.45);
-  ctx.quadraticCurveTo(s * 0.2, s * 1.05, -s * 0.15, s * 1.15);
-  ctx.quadraticCurveTo(-s * 0.05, s * 0.7, s * 0.1, s * 0.45);
-  ctx.fill();
-  // tail
-  const flap = Math.sin(wob * 2.6) * 0.2;
-  ctx.beginPath();
-  ctx.moveTo(-s * 1.15, 0);
-  ctx.lineTo(-s * 1.85, -s * (0.55 + flap));
-  ctx.lineTo(-s * 1.5, 0);
-  ctx.lineTo(-s * 1.85, s * (0.55 + flap));
-  ctx.closePath();
-  ctx.fill();
-  // blowhole bubbles
-  ctx.fillStyle = "rgba(220,240,255,0.55)";
-  for (let i = 0; i < 3; i += 1) {
-    ctx.beginPath();
-    ctx.arc(-s * 0.15 + i * s * 0.08, -s * 0.75 - Math.sin(wob * 3 + i) * s * 0.08, s * 0.07, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // eye
-  ctx.fillStyle = "#f4fbff";
-  ctx.beginPath();
-  ctx.arc(s * 0.65, -s * 0.15, s * 0.14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = deep;
-  ctx.beginPath();
-  ctx.arc(s * 0.7, -s * 0.15, s * 0.06, 0, Math.PI * 2);
-  ctx.fill();
-  // luminous marks
-  ctx.fillStyle = `rgba(180,230,255,${0.35 + Math.sin(wob * 4) * 0.15})`;
-  ctx.beginPath();
-  ctx.ellipse(s * 0.1, 0, s * 0.35, s * 0.12, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (artDraw("drawWhale", body, alpha)) return;
+}
+
+function drawDolphin(body, alpha = 1) {
+  if (artDraw("drawDolphin", body, alpha)) return;
+}
+
+function drawStarfish(body, alpha = 1) {
+  if (artDraw("drawStarfish", body, alpha)) return;
 }
 
 function drawInkCloudFx() {
@@ -9627,8 +8373,8 @@ function drawLifeBody(body, alpha = 1, heroOverride = null) {
   else if (hero === "squid") drawSquid(body, alpha);
   else if (hero === "seahorse") drawSeahorse(body, alpha);
   else if (hero === "whale") drawWhale(body, alpha);
-  else if (hero === "dolphin") drawManta(body, alpha);
-  else if (hero === "starfish") drawCrab(body, alpha);
+  else if (hero === "dolphin") drawDolphin(body, alpha);
+  else if (hero === "starfish") drawStarfish(body, alpha);
   else if (hero === "custom") drawCustomHero(body, alpha);
   else drawInkPolyp(body, alpha);
 }
@@ -10016,7 +8762,21 @@ function drawParticles() {
 }
 
 function drawOpeningPulse() {
-  // No rotating rings around the octopus.
+  if (!state.life || !inOpening() || state.meta?.reduceMotion) return;
+  const life = state.life;
+  const t = state.elapsed / OPENING_SEC;
+  const glow = (1 - t) * 0.22;
+  if (glow <= 0.02) return;
+  ctx.save();
+  ctx.globalAlpha = glow;
+  const g = ctx.createRadialGradient(life.x, life.y, life.r * 0.4, life.x, life.y, life.r * 2.4);
+  g.addColorStop(0, "rgba(122, 255, 212, 0.35)");
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(life.x, life.y, life.r * 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function draw() {
@@ -10126,12 +8886,97 @@ function renderCloudStatus(text = "") {
   if (account) account.textContent = linked ? "Отключить" : tr("cloud_setup", "Подключить");
 }
 
+async function renderSocial() {
+  const profileEl = document.getElementById("social-profile");
+  const listEl = document.getElementById("social-list");
+  if (!profileEl || !listEl) return;
+  if (!window.OttiskSocial?.isAvailable?.()) {
+    profileEl.textContent = window.OttiskI18n?.locale === "en"
+      ? "Link cloud account to use friends"
+      : "подключи облако для друзей";
+    listEl.textContent = "";
+    return;
+  }
+  profileEl.textContent = tr("loading", "Загрузка…");
+  try {
+    const [profile, friends, league, duels] = await Promise.all([
+      window.OttiskSocial.profile(),
+      window.OttiskSocial.friends(),
+      window.OttiskSocial.seasonLeague(),
+      window.OttiskSocial.duels(),
+    ]);
+    profileEl.textContent = profile
+      ? `${profile.displayName || state.meta.cloudName || "ОТТИСК"} · ${profile.friendCode} · ${league?.league || "bronze"}${league?.rank ? ` #${league.rank}` : ""}${league?.leagueSize ? ` / ${league.leagueSize}` : ""}`
+      : tr("error", "Ошибка");
+    listEl.textContent = "";
+    for (const friend of friends?.friends || []) {
+      const entry = document.createElement("div");
+      entry.className = "social-entry";
+      entry.textContent = `${friend.displayName} · ${friend.friendCode}`;
+      listEl.appendChild(entry);
+    }
+    for (const duel of (duels?.duels || []).slice(0, 4)) {
+      const entry = document.createElement("div");
+      entry.className = "social-entry";
+      const result = duel.status === "completed"
+        ? `${duel.outcome} · ${duel.challengerScore}:${duel.targetScore}`
+        : window.OttiskI18n?.locale === "en" ? "awaiting run" : "ждёт забега";
+      entry.textContent = `${window.OttiskI18n?.locale === "en" ? "duel" : "дуэль"} · ${duel.opponent.displayName} · ${result}`;
+      if (duel.status === "pending" && duel.role === "target" && state.meta.lastReplay) {
+        const accept = document.createElement("button");
+        accept.type = "button";
+        accept.className = "menu-link";
+        accept.textContent = window.OttiskI18n?.locale === "en" ? "Use last run" : "Принять последним забегом";
+        accept.addEventListener("click", async () => {
+          const replay = state.meta.lastReplay;
+          await window.OttiskSocial.completeDuel(duel.id, replay.score, replay.durationMs, replay.samples);
+          await renderSocial();
+        });
+        entry.append(" ", accept);
+      }
+      listEl.appendChild(entry);
+    }
+  } catch (error) {
+    profileEl.textContent = `${tr("error", "Ошибка")} · ${error.code || error.message}`;
+  }
+}
+
+async function renderLeagueBoard() {
+  const board = document.getElementById("league-board");
+  if (!board) return;
+  if (!window.OttiskSocial?.isAvailable?.()) {
+    board.classList.remove("hidden");
+    board.innerHTML = "<li>подключи облако</li>";
+    return;
+  }
+  board.classList.remove("hidden");
+  board.innerHTML = `<li>${tr("loading", "Загрузка…")}</li>`;
+  try {
+    const league = await window.OttiskSocial.seasonLeague();
+    const entries = league?.entries || league?.board || [];
+    board.textContent = "";
+    if (!entries.length) {
+      const li = document.createElement("li");
+      li.textContent = `${league?.league || "bronze"}${league?.rank ? ` · #${league.rank}` : ""} · пока пусто`;
+      board.appendChild(li);
+      return;
+    }
+    entries.slice(0, 10).forEach((row, index) => {
+      const li = document.createElement("li");
+      li.textContent = `#${row.rank || index + 1} · ${row.displayName || "—"} · ${row.score || 0}`;
+      board.appendChild(li);
+    });
+  } catch (error) {
+    board.innerHTML = `<li>${tr("error", "Ошибка")} · ${error.code || error.message}</li>`;
+  }
+}
+
 function mergeCloudMeta(local, remote) {
   if (!remote || typeof remote !== "object") return local;
   const unionKeys = [
     "unlockedSkins", "premiumUnlocked", "unlockedHeroes", "unlockedTrails",
     "unlockedFrames", "seasonalUnlocks", "trophies", "seenRunTips",
-    "seenAbilityTips", "seenMechanicCards",
+    "seenAbilityTips", "seenMechanicCards", "seenChapters",
   ];
   const merged = { ...remote, ...local };
   for (const key of unionKeys) {
@@ -10142,6 +8987,19 @@ function mergeCloudMeta(local, remote) {
   }
   merged.iapHeroes = local.iapHeroes || [];
   merged.starterPackBought = !!local.starterPackBought;
+  const api = window.OttiskProgression;
+  if (api) {
+    const localProgress = api.validateState(local.progression).valid ? local.progression : api.createState();
+    const remoteProgress = api.validateState(remote.progression).valid ? remote.progression : api.createState();
+    const spent = {};
+    for (const skill of api.SKILL_TREE) {
+      const rank = Math.max(localProgress.spent[skill.id] || 0, remoteProgress.spent[skill.id] || 0);
+      if (rank) spent[skill.id] = rank;
+    }
+    const used = api.SKILL_TREE.reduce((sum, skill) => sum + (spent[skill.id] || 0) * skill.cost, 0);
+    const totalEarned = Math.max(used, localProgress.totalEarned, remoteProgress.totalEarned);
+    merged.progression = { version: api.STATE_VERSION, available: totalEarned - used, totalEarned, spent };
+  }
   return merged;
 }
 
@@ -10151,14 +9009,21 @@ function boot() {
   window.OttiskI18n?.apply?.();
   state.tuning = window.OttiskBalanceTuner?.fromAnalytics?.().adjustments || state.tuning;
   setupPerformanceMonitor();
+  const storedApi = (() => {
+    try { return localStorage.getItem("ottisk_cloud_api") || ""; } catch (_) { return ""; }
+  })();
   const declaredApi = document.querySelector('meta[name="ottisk-cloud-api"]')?.content?.trim();
-  if (declaredApi && !cloudConfig().apiUrl) {
+  const apiUrl = storedApi || declaredApi;
+  if (apiUrl && !cloudConfig().apiUrl) {
     window.OttiskCloud?.configure?.({
-      apiUrl: declaredApi,
+      apiUrl,
       release: "1.2.0",
       platform: window.OttiskNative?.platform || "web",
     });
   }
+  const apiInput = document.getElementById("cloud-api-input");
+  if (apiInput) apiInput.value = cloudConfig().apiUrl || storedApi || declaredApi || "";
+  window.OttiskPwa?.setup?.(document.querySelector(".menu-foot") || document.getElementById("app"));
   applyAccessibilityPrefs();
   refreshCssCache();
   ensureSeasonalUnlock();
@@ -10172,6 +9037,8 @@ function boot() {
   renderDaily();
   renderWeekly();
   renderSettings();
+  renderProgression();
+  renderStory();
   renderSkinMeta();
   renderHeroPicker();
   renderGifts();
@@ -10190,6 +9057,7 @@ function boot() {
   bindDrawHeroUi();
   window.OttiskAnalytics?.track("app_open");
   renderCloudStatus();
+  renderSocial();
   document.getElementById("btn-mode-daily")?.addEventListener("click", () => {
     if (!state.meta) return;
     state.meta.dailyModeEnabled = !state.meta.dailyModeEnabled;
@@ -10205,6 +9073,39 @@ function boot() {
     updateModeToggles();
     sfxUiTap(1);
     showToast(state.meta.coopEnabled ? "дуэт · два пальца" : "дуэт · выкл");
+  });
+  document.getElementById("btn-mode-ghost")?.addEventListener("click", () => {
+    if (!state.meta) return;
+    state.meta.ghostRaceEnabled = state.meta.ghostRaceEnabled === false;
+    saveMeta();
+    updateModeToggles();
+    sfxUiTap(1);
+    showToast(state.meta.ghostRaceEnabled !== false ? "призрак · вкл" : "призрак · выкл");
+  });
+  document.getElementById("btn-cloud-api-save")?.addEventListener("click", () => {
+    const input = document.getElementById("cloud-api-input");
+    const apiUrl = (input?.value || "").trim();
+    if (!apiUrl) {
+      try { localStorage.removeItem("ottisk_cloud_api"); } catch (_) {}
+      showToast("URL очищен · офлайн");
+      renderCloudStatus();
+      return;
+    }
+    try {
+      window.OttiskCloud?.configure?.({
+        apiUrl,
+        release: "1.2.0",
+        platform: window.OttiskNative?.platform || "web",
+      });
+      localStorage.setItem("ottisk_cloud_api", apiUrl);
+      renderCloudStatus();
+      showToast("облако · URL сохранён");
+    } catch (_) {
+      showToast("неверный URL");
+    }
+  });
+  document.getElementById("btn-league-board")?.addEventListener("click", () => {
+    renderLeagueBoard().catch(() => showToast("лига недоступна"));
   });
   document.querySelectorAll(".run-mode-btn").forEach((button) => {
     button.addEventListener("click", () => {
@@ -10227,6 +9128,8 @@ function boot() {
     updateModeToggles();
     renderSettings();
     updateDonateThanks();
+    renderProgression();
+    renderStory();
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));
@@ -10365,6 +9268,27 @@ function boot() {
     renderSettings();
     showToast(document.getElementById("btn-quality")?.textContent || "качество");
   });
+  document.getElementById("btn-large-ui")?.addEventListener("click", () => {
+    state.meta.largeUi = !state.meta.largeUi;
+    saveMeta();
+    applyAccessibilityPrefs();
+    renderSettings();
+  });
+  document.getElementById("btn-one-hand")?.addEventListener("click", () => {
+    const values = ["off", "right", "left"];
+    state.meta.oneHand = values[(values.indexOf(state.meta.oneHand || "off") + 1) % values.length];
+    saveMeta();
+    applyAccessibilityPrefs();
+    renderSettings();
+  });
+  document.getElementById("btn-colorblind")?.addEventListener("click", () => {
+    const values = ["off", "protanopia", "deuteranopia", "tritanopia"];
+    state.meta.colorblind = values[(values.indexOf(state.meta.colorblind || "off") + 1) % values.length];
+    saveMeta();
+    applyAccessibilityPrefs();
+    applyThemeFromScore(false);
+    renderSettings();
+  });
   const installBackup = (imported) => {
     if (!state.meta || !imported) return false;
     const next = {
@@ -10433,6 +9357,7 @@ function boot() {
       if (!window.confirm("Отключить облачный аккаунт на этом устройстве?")) return;
       await window.OttiskCloud.logout();
       renderCloudStatus("аккаунт отключён · локальный прогресс сохранён");
+      renderSocial();
       return;
     }
     if (!ensureCloudEndpoint()) return;
@@ -10446,11 +9371,13 @@ function boot() {
         window.prompt("Сохраните код восстановления. Он показывается только один раз:", result.recoveryCode);
         await window.OttiskCloud.pushSave(state.meta);
         renderCloudStatus("аккаунт создан · код восстановления сохраните отдельно");
+        renderSocial();
       } else {
         const code = window.prompt("Введите код восстановления:", "");
         if (!code) return;
         await window.OttiskCloud.recover(code);
         renderCloudStatus("аккаунт восстановлен · нажмите «Синхронизировать»");
+        renderSocial();
       }
     } catch (error) {
       renderCloudStatus(`ошибка облака · ${error.code || error.message || "повторите позже"}`);
@@ -10509,6 +9436,43 @@ function boot() {
       const failed = document.createElement("li");
       failed.textContent = "рейтинг временно недоступен";
       list.appendChild(failed);
+    }
+  });
+  document.getElementById("btn-social-refresh")?.addEventListener("click", () => renderSocial());
+  document.getElementById("btn-social-add")?.addEventListener("click", async () => {
+    if (!window.OttiskSocial?.isAvailable?.()) {
+      showToast(window.OttiskI18n?.locale === "en" ? "link cloud first" : "сначала подключи облако");
+      return;
+    }
+    const code = window.prompt(window.OttiskI18n?.locale === "en" ? "Friend code:" : "Код друга:", "");
+    if (!code) return;
+    try {
+      await window.OttiskSocial.addFriend(code, state.meta.cloudName || "");
+      await renderSocial();
+    } catch (error) {
+      showToast(`${tr("error", "ошибка")} · ${error.code || error.message}`);
+    }
+  });
+  document.getElementById("btn-social-duel")?.addEventListener("click", async () => {
+    const replay = state.meta?.lastReplay;
+    if (!window.OttiskSocial?.isAvailable?.() || !replay) {
+      showToast(window.OttiskI18n?.locale === "en" ? "link cloud and finish a run first" : "подключи облако и заверши забег");
+      return;
+    }
+    const code = window.prompt(window.OttiskI18n?.locale === "en" ? "Friend code for duel:" : "Код друга для дуэли:", "");
+    if (!code) return;
+    try {
+      await window.OttiskSocial.createDuel(
+        code,
+        replay.score,
+        state.meta.cloudName || "",
+        replay.durationMs,
+        replay.samples,
+      );
+      await renderSocial();
+      showToast(window.OttiskI18n?.locale === "en" ? "duel sent" : "дуэль отправлена");
+    } catch (error) {
+      showToast(`${tr("error", "ошибка")} · ${error.code || error.message}`);
     }
   });
   const crashKey = "ottisk-crash-opt-in-v1";
@@ -10603,7 +9567,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=77")
+      .register("./sw.js?v=81")
       .then((reg) => reg.update())
       .catch(() => {});
   }

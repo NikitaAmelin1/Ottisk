@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ОТТИСК — редактор контента</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #071321; color: #e7f7ff; }
+    * { box-sizing: border-box; }
+    body { max-width: 1100px; margin: auto; padding: 1.25rem; }
+    h1 { margin-bottom: .25rem; }
+    p { color: #b9ceda; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0; }
+    button, .file-label {
+      border: 1px solid #5d8498; border-radius: .45rem; background: #102b3c; color: inherit;
+      cursor: pointer; font: inherit; padding: .65rem .9rem;
+    }
+    button:hover, button:focus-visible, .file-label:hover, .file-label:focus-within { background: #174058; outline: 2px solid #79e9d0; }
+    input[type="file"] { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+    textarea {
+      width: 100%; min-height: 60vh; resize: vertical; border: 1px solid #456779; border-radius: .5rem;
+      background: #030a12; color: #dffbf4; padding: 1rem; font: 14px/1.5 ui-monospace, monospace;
+    }
+    #status { border-left: .3rem solid #8299a5; padding: .7rem 1rem; }
+    #status.good { border-color: #62dca7; color: #a8f4cf; }
+    #status.bad { border-color: #ff7385; color: #ffc2ca; }
+    #errors { color: #ffc2ca; }
+    .hint { font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Редактор контента ОТТИСК</h1>
+    <p>Импорт, проверка и экспорт каталога выполняются только в браузере. Данные никуда не отправляются.</p>
+    <div class="toolbar" role="group" aria-label="Действия с каталогом">
+      <label class="file-label">
+        Импорт JSON
+        <input id="import-file" type="file" accept="application/json,.json" />
+      </label>
+      <button id="validate" type="button">Проверить</button>
+      <button id="format" type="button">Форматировать</button>
+      <button id="export" type="button">Экспорт JSON</button>
+      <button id="defaults" type="button">Вернуть пример</button>
+    </div>
+    <label for="catalog"><strong>Каталог JSON</strong></label>
+    <textarea id="catalog" spellcheck="false" aria-describedby="editor-hint status"></textarea>
+    <p id="editor-hint" class="hint">Обязательные разделы: biomes, chapters, enemies, waves и events.</p>
+    <div id="status" role="status" aria-live="polite">Готово к редактированию.</div>
+    <ol id="errors" aria-label="Ошибки проверки"></ol>
+  </main>
+
+  <script src="./js/content.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const api = globalThis.OttiskContent;
+      const textarea = document.getElementById("catalog");
+      const status = document.getElementById("status");
+      const errors = document.getElementById("errors");
+      const fileInput = document.getElementById("import-file");
+
+      function setStatus(message, good) {
+        status.textContent = message;
+        status.className = good === true ? "good" : good === false ? "bad" : "";
+      }
+
+      function showResult(result) {
+        errors.replaceChildren();
+        if (result.valid) {
+          setStatus("Каталог корректен и готов к экспорту.", true);
+          return true;
+        }
+        result.errors.forEach((item) => {
+          const row = document.createElement("li");
+          row.textContent = `${item.path}: ${item.message}`;
+          errors.append(row);
+        });
+        setStatus(`Найдено ошибок: ${result.errors.length}.`, false);
+        return false;
+      }
+
+      function validateEditor() {
+        return showResult(api.parse(textarea.value));
+      }
+
+      function loadDefaults() {
+        textarea.value = JSON.stringify(api.DEFAULT_CATALOG, null, 2);
+        errors.replaceChildren();
+        setStatus("Загружен встроенный пример каталога.", true);
+      }
+
+      document.getElementById("validate").addEventListener("click", validateEditor);
+      document.getElementById("format").addEventListener("click", () => {
+        const result = api.parse(textarea.value);
+        if (showResult(result)) textarea.value = JSON.stringify(result.catalog, null, 2);
+      });
+      document.getElementById("defaults").addEventListener("click", () => {
+        if (confirm("Заменить текущий текст встроенным примером?")) loadDefaults();
+      });
+      document.getElementById("export").addEventListener("click", () => {
+        const result = api.parse(textarea.value);
+        if (!showResult(result)) return;
+        const blob = new Blob([`${JSON.stringify(result.catalog, null, 2)}\n`], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "ottisk-content.json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 0);
+      });
+      fileInput.addEventListener("change", async () => {
+        const [file] = fileInput.files;
+        if (!file) return;
+        try {
+          textarea.value = await file.text();
+          validateEditor();
+        } catch (cause) {
+          setStatus(`Не удалось прочитать файл: ${cause.message}`, false);
+        } finally {
+          fileInput.value = "";
+        }
+      });
+
+      if (!api) {
+        setStatus("Модуль js/content.js не найден.", false);
+        return;
+      }
+      loadDefaults();
+    })();
+  </script>
+</body>
+</html>
