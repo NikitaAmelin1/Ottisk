@@ -819,6 +819,12 @@ function tr(key, fallback = "") {
   return window.OttiskI18n?.t?.(key, fallback) ?? fallback;
 }
 
+function trf(key, fallback, vars = {}) {
+  let s = tr(key, fallback);
+  for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}
+
 function rand(min, max) {
   return min + Math.random() * (max - min);
 }
@@ -1984,11 +1990,11 @@ function activeEventId() {
 
 function startRunEvent(def) {
   state.event = { id: def.id, title: def.title, t: def.dur };
-  setEventChip(`событие · ${def.title}`);
+  setEventChip(`${tr("event_chip", "событие")} · ${def.title}`);
   pulseUnlock(cssVar("--gold", "#ffe898"), 0.12);
   tipOnce(`event_${def.id}`, def.title.toUpperCase(), 1600, {
     persist: true,
-    first: `Событие: ${def.title}`,
+    first: `${tr("event_chip", "Событие")}: ${def.title}`,
     firstMs: 2200,
   });
   if (def.id === "raid") {
@@ -2372,7 +2378,7 @@ function waveNumber(wave = waveForScore()) {
 function updateWaveUi(flash = false) {
   if (!waveLabelEl) return;
   if (state.event?.title) {
-    setEventChip(`событие · ${state.event.title}`);
+    setEventChip(`${tr("event_chip", "событие")} · ${state.event.title}`);
     return;
   }
   const wave = waveForScore();
@@ -3958,7 +3964,7 @@ function refreshDaily() {
 
 function updateEconomyLabels() {
   if (!state.meta) return;
-  if (marksStartEl) marksStartEl.textContent = `${state.meta.marks || 0} следов`;
+  if (marksStartEl) marksStartEl.textContent = `${state.meta.marks || 0} ${tr("marks_label", "следов")}`;
   const streakText = `${Math.max(0, state.meta.streak || 0)} дн`;
   if (streakStartEl) streakStartEl.textContent = streakText;
   if (streakOverEl) streakOverEl.textContent = String(Math.max(0, state.meta.streak || 0));
@@ -4051,7 +4057,7 @@ function claimAllReadyGifts() {
   if (total <= 0) return;
   goalChime();
   buzz([10, 18, 10]);
-  showToast(`подарки · +${total} следов`);
+  showToast(`${tr("gifts", "подарки")} · +${total} ${tr("marks_label", "следов")}`);
   renderGifts();
   updateEconomyLabels();
 }
@@ -4083,7 +4089,7 @@ function renderGifts() {
     all.type = "button";
     all.className = "gift-tile ready gift-all";
     all.innerHTML = `
-      <span class="gift-tile-title">Забрать все</span>
+      <span class="gift-tile-title">${tr("claim_all", "Забрать все")}</span>
       <span class="gift-tile-meta">${readyGifts.length}</span>
     `;
     all.addEventListener("click", () => claimAllReadyGifts());
@@ -4098,7 +4104,10 @@ function renderGifts() {
       <span class="gift-tile-title">${gift.title}</span>
       <span class="gift-tile-meta">${amountText}</span>
     `;
-    btn.setAttribute("aria-label", `Забрать подарок ${gift.title} ${amountText}`);
+    btn.setAttribute("aria-label", trf("daily_gift_cta", "Забрать подарок {title} {amount}", {
+      title: gift.title,
+      amount: amountText,
+    }));
     btn.addEventListener("click", () => claimGift(gift.id));
     list.appendChild(btn);
   }
@@ -4106,7 +4115,7 @@ function renderGifts() {
     const next = readyGifts.length ? null : nextGiftWait(now);
     if (next) {
       nextEl.classList.remove("hidden");
-      nextEl.textContent = `Подарок через ${formatWait(next.wait)}`;
+      nextEl.textContent = trf("gift_next", "Подарок через {time}", { time: formatWait(next.wait) });
     } else {
       nextEl.classList.add("hidden");
       nextEl.textContent = "";
@@ -5051,35 +5060,36 @@ function renderDailyResult() {
 
 function renderNextGoal() {
   if (!nextGoalEl || !state.meta) return;
+  const prefix = tr("next_goal", "следующая цель");
   const daily = currentDailyDef();
   if (daily && !state.meta.dailyDone) {
-    nextGoalEl.textContent = `следующая цель · ${daily.title}: ${daily.label(state)}`;
+    nextGoalEl.textContent = `${prefix} · ${daily.title}: ${daily.label(state)}`;
     return;
   }
   if (!state.meta.weekRewardTaken) {
     const quest = currentWeeklyDef();
     const progress = Math.min(quest.target, state.meta.weekProgress || 0);
-    nextGoalEl.textContent = `следующая цель · ${quest.title}: ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
+    nextGoalEl.textContent = `${prefix} · ${quest.title}: ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
     return;
   }
   const skin = nextScoreSkinGoal();
   if (skin) {
-    nextGoalEl.textContent = `следующая цель · оттиск «${skin.name}»: рекорд ${state.meta.best || 0}/${skin.at}`;
+    nextGoalEl.textContent = `${prefix} · оттиск «${skin.name}»: ${tr("record", "рекорд")} ${state.meta.best || 0}/${skin.at}`;
     return;
   }
   const hero = nextLockedPremiumHero();
   if (hero) {
     const have = Math.min(state.meta.marks || 0, hero.cost);
-    nextGoalEl.textContent = `следующая цель · герой «${hero.name}»: ${have}/${hero.cost} следов`;
+    nextGoalEl.textContent = `${prefix} · герой «${hero.name}»: ${have}/${hero.cost} ${tr("marks_label", "следов")}`;
     return;
   }
   const pearl = SKINS.find((s) => s.id === "pearl");
   if (pearl && !isSkinOwned("pearl")) {
     const have = Math.min(state.meta.marks || 0, pearl.cost);
-    nextGoalEl.textContent = `следующая цель · окрас «жемчуг»: ${have}/${pearl.cost} следов`;
+    nextGoalEl.textContent = `${prefix} · окрас «жемчуг»: ${have}/${pearl.cost} ${tr("marks_label", "следов")}`;
     return;
   }
-  nextGoalEl.textContent = "следующая цель · новый рекорд";
+  nextGoalEl.textContent = `${prefix} · ${tr("new_record", "новый рекорд")}`;
 }
 
 function syncMutation() {
@@ -5493,7 +5503,7 @@ function resolveNextStep() {
   const daily = currentDailyDef();
   if (daily && !state.meta.dailyDone) {
     return {
-      title: `Цель · ${daily.title}`,
+      title: `${tr("next_goal", "Цель")} · ${daily.title}`,
       sub: daily.label(state),
       run: () => {
         state.meta.dailyModeEnabled = true;
@@ -5509,7 +5519,7 @@ function resolveNextStep() {
     const quest = currentWeeklyDef();
     const progress = Math.min(quest.target, state.meta.weekProgress || 0);
     return {
-      title: `Цель · ${quest.title}`,
+      title: `${tr("next_goal", "Цель")} · ${quest.title}`,
       sub: `${progress}/${quest.target} ${quest.unit}`,
       run: () => {
         screenOverEl.classList.add("hidden");
@@ -5531,7 +5541,7 @@ function resolveNextStep() {
   if ((state.meta.ghostScore || 0) >= 20 && state.meta.ghostRaceEnabled !== false) {
     return {
       title: "Гонка с призраком",
-      sub: `лучший след · ${state.meta.ghostScore}`,
+      sub: `${tr("best_path", "лучший след")} · ${state.meta.ghostScore}`,
       run: () => {
         state.meta.ghostRaceEnabled = true;
         saveMeta();
@@ -5542,8 +5552,8 @@ function resolveNextStep() {
     };
   }
   return {
-    title: "Новый рекорд",
-    sub: "ещё один забег",
+    title: tr("new_record", "Новый рекорд"),
+    sub: tr("new_run_sub", "ещё один забег"),
     run: () => {
       screenOverEl.classList.add("hidden");
       startGame();
@@ -5574,7 +5584,7 @@ function renderDeathOffers() {
       ? `ежедневка · +${DAILY_QUEST_REWARD} следов`
       : state.dailyMode
         ? "забег дня · Stories"
-        : "Stories · волна и герой";
+        : tr("share_sub", "Stories · волна и герой");
   }
   box.classList.toggle("hidden", !box.childElementCount);
 }
@@ -8924,9 +8934,9 @@ function renderCloudStatus(text = "") {
   const configured = !!cloudConfig().apiUrl;
   const linked = !!window.OttiskCloud?.isLinked?.();
   status.textContent = text || (linked
-    ? "подключено · синхронизация активна"
-    : configured ? "сервер настроен · нужен аккаунт" : "не подключено · игра работает офлайн");
-  if (account) account.textContent = linked ? "Отключить" : tr("cloud_setup", "Подключить");
+    ? tr("cloud_connected", "подключено · синхронизация активна")
+    : configured ? tr("cloud_account_required", "сервер настроен · нужен аккаунт") : tr("cloud_disconnected", "не подключено · игра работает офлайн"));
+  if (account) account.textContent = linked ? tr("cloud_disconnect", "Отключить") : tr("cloud_setup", "Подключить");
 }
 
 async function renderSocial() {
@@ -9173,6 +9183,13 @@ function boot() {
     updateDonateThanks();
     renderProgression();
     renderStory();
+    if (typeof renderGifts === "function") renderGifts();
+    if (typeof renderWeekly === "function") renderWeekly();
+    if (typeof renderNextGoal === "function") renderNextGoal();
+    if (typeof renderDeathOffers === "function") renderDeathOffers();
+    if (typeof renderCloudStatus === "function") renderCloudStatus();
+    if (typeof updateEconomyLabels === "function") updateEconomyLabels();
+    if (typeof renderTrophyList === "function") renderTrophyList();
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));

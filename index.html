@@ -34,18 +34,18 @@
 
     <footer id="status" class="status hud hidden">
       <div class="hud-score">
-        <span class="meta-label">свет</span>
+        <span class="meta-label" data-i18n="light_label">свет</span>
         <span id="score">0</span>
       </div>
       <div class="hud-main">
         <div class="hud-row">
           <span id="wave-label" class="wave-chip">волна 1 · стая</span>
           <span class="hud-hunger-label">
-            <span class="meta-label">сытость</span>
+            <span class="meta-label" data-i18n="fullness">сытость</span>
             <span id="heat-pct" class="heat-pct">100%</span>
           </span>
         </div>
-        <div id="heat" class="heat" aria-label="Сытость">
+        <div id="heat" class="heat" aria-label="Сытость" data-i18n-aria="fullness">
           <i id="heat-fill"></i>
         </div>
         <div class="mut-track" aria-hidden="true">
@@ -74,7 +74,7 @@
         </div>
       </header>
 
-      <button id="btn-shop" class="btn-shop-top" type="button" aria-label="Открыть магазин">
+      <button id="btn-shop" class="btn-shop-top" type="button" aria-label="Открыть магазин" data-i18n-aria="open_shop">
         <span class="btn-shop-top-copy">
           <span class="btn-shop-top-main" data-i18n="shop">Магазин</span>
           <span id="donate-thanks" class="btn-shop-top-sub" data-i18n="shop_sub">герои · следы · донат</span>
@@ -106,10 +106,10 @@
           <button class="menu-toggle run-mode-btn" data-run-mode="calm" type="button" aria-pressed="false" data-i18n="calm">спокойный</button>
         </div>
         <p id="mode-note" class="menu-note quiet">обычный забег</p>
-        <button id="btn-how-to-play" class="menu-link how-to-play" type="button">Как играть</button>
+        <button id="btn-how-to-play" class="menu-link how-to-play" type="button" data-i18n="how_to_play">Как играть</button>
         <details class="access-details">
-          <summary class="menu-section-label">Доступность и качество</summary>
-          <div class="access-row" role="group" aria-label="Доступность">
+          <summary class="menu-section-label" data-i18n="accessibility_quality">Доступность и качество</summary>
+          <div class="access-row" role="group" aria-label="Доступность" data-i18n-aria="accessibility">
             <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
             <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
             <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
@@ -128,7 +128,7 @@
           <div id="trophy-list" class="trophy-list" role="list"></div>
         </section>
 
-        <section id="menu-gifts" class="menu-gifts hidden" aria-label="Подарки">
+        <section id="menu-gifts" class="menu-gifts hidden" aria-label="Подарки" data-i18n-aria="gifts">
           <div id="gift-list" class="gift-rail" role="list"></div>
         </section>
         <p id="gift-next" class="menu-note quiet hidden" aria-live="polite"></p>
@@ -167,13 +167,13 @@
           </div>
           <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
           <details class="advanced-tools">
-            <summary class="menu-note quiet">Расширенные настройки облака</summary>
+            <summary class="menu-note quiet" data-i18n="advanced_cloud">Расширенные настройки облака</summary>
             <label class="cloud-api-label" for="cloud-api-input">
               <span class="menu-note quiet">URL Worker (Cloudflare)</span>
               <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
             </label>
             <div class="data-tools-row">
-              <button id="btn-cloud-api-save" class="menu-link" type="button">Сохранить URL</button>
+              <button id="btn-cloud-api-save" class="menu-link" type="button" data-i18n="save_url">Сохранить URL</button>
               <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
             </div>
           </details>
@@ -194,14 +194,14 @@
 
         <nav class="menu-foot" aria-label="Дополнительно">
           <button id="btn-donate" class="menu-link" type="button">
-            <span class="btn-donate-main">Донат</span>
+            <span class="btn-donate-main" data-i18n="donate">Донат</span>
             <span class="btn-donate-sub">поддержать игру</span>
           </button>
           <a href="./landing.html" data-i18n="about">О игре</a>
           <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
           <a href="./support.html" data-i18n="support">Поддержка</a>
           <details class="advanced-tools foot-advanced">
-            <summary>Для авторов</summary>
+            <summary data-i18n="for_authors">Для авторов</summary>
             <a href="./editor.html">Редактор контента</a>
           </details>
         </nav>
@@ -228,7 +228,7 @@
         <h2 id="hero-pick-name" class="flow-title">осьминог</h2>
         <p id="hero-ability-hint" class="flow-sub">рывок</p>
         <p id="hero-lock-hint" class="flow-sub hero-lock-hint hidden"></p>
-        <button id="btn-buy-marks-hero" class="menu-link flow-draw hidden" type="button">купить следы</button>
+        <button id="btn-buy-marks-hero" class="menu-link flow-draw hidden" type="button" data-i18n="buy_marks">Купить следы</button>
         <div id="hero-list" class="hero-rail" role="listbox" aria-label="Выбор героя"></div>
         <button id="btn-draw-hero" class="menu-link flow-draw" type="button">нарисовать своего</button>
         <button id="btn-hero-next" class="btn btn-primary" type="button">
@@ -338,7 +338,7 @@
     <div id="screen-onboard" class="screen hidden">
       <div class="screen-bg dim" aria-hidden="true"></div>
       <div class="over-card onboard-card">
-        <p class="over-label">Как играть</p>
+        <p class="over-label" data-i18n="how_to_play">Как играть</p>
         <p class="brand over-brand">ОТТИСК</p>
         <p id="onboard-text" class="hint continue-hint">Удерживай палец — существо живёт только в касании.</p>
         <button id="btn-onboard" class="btn btn-primary" type="button">
@@ -364,7 +364,7 @@
           <span class="btn-sub">App Store / донат</span>
         </button>
         <button id="btn-continue-shop" class="btn btn-secondary hidden" type="button">
-          <span class="btn-main">Купить следы</span>
+          <span class="btn-main" data-i18n="buy_marks">Купить следы</span>
           <span class="btn-sub">+60 · потом продолжить</span>
         </button>
         <button id="btn-skip-continue" class="btn btn-ghost" type="button">
@@ -389,28 +389,28 @@
           <p id="daily-mode-result" class="daily-result hidden"></p>
           <p id="marks-result" class="marks-result"></p>
           <p id="next-goal" class="next-goal"></p>
-          <div id="death-offers" class="death-offers hidden" aria-label="Следующий шаг"></div>
-          <p class="best">Рекорд <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
+          <div id="death-offers" class="death-offers hidden" aria-label="Следующая цель" data-i18n-aria="next_goal"></div>
+          <p class="best"><span data-i18n="record">Рекорд</span> <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
         </div>
         <div class="over-actions over-actions-focused">
           <button id="btn-retry" class="btn btn-primary" type="button">
             <span class="btn-main" data-i18n="retry">Ещё раз</span>
-            <span class="btn-sub">новый забег</span>
+            <span class="btn-sub" data-i18n="new_run_sub">новый забег</span>
           </button>
           <button id="btn-menu" class="btn btn-secondary" type="button">
             <span class="btn-main" data-i18n="menu">В меню</span>
-            <span class="btn-sub">на главный экран</span>
+            <span class="btn-sub" data-i18n="menu_sub">на главный экран</span>
           </button>
           <button id="btn-share" class="btn btn-ghost over-secondary" type="button">
             <span class="btn-main" data-i18n="share">Поделиться</span>
-            <span class="btn-sub" id="share-sub">Stories · волна и герой</span>
+            <span class="btn-sub" id="share-sub" data-i18n="share_sub">Stories · волна и герой</span>
           </button>
           <button id="btn-rate" class="btn btn-ghost over-secondary hidden" type="button">
-            <span class="btn-main">Оценить</span>
+            <span class="btn-main" data-i18n="rate_app">Оценить</span>
             <span class="btn-sub">если след понравился</span>
           </button>
           <button id="btn-buy-marks" class="btn btn-ghost over-secondary" type="button">
-            <span class="btn-main">Купить следы</span>
+            <span class="btn-main" data-i18n="buy_marks">Купить следы</span>
             <span class="btn-sub">герои · косметика · continue</span>
           </button>
         </div>
