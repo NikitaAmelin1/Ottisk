@@ -24,10 +24,13 @@ APK появится в `android/app/build/outputs/apk/debug/`.
 
 ## Перед публикацией
 
-1. Создать signing key и release-конфигурацию в Android Studio.
-2. Собрать Android App Bundle (`.aab`).
-3. Заполнить карточку Google Play, Data Safety и ссылку на `privacy.html`.
-4. Проверить игру на телефонах 60/90/120 Гц и с разными вырезами экрана.
-5. Цифровые покупки в Google Play должны использовать Play Billing. В текущей версии они остаются недоступными в Android-сборке; StoreKit не переносится на Android автоматически.
+1. Настроить upload key в защищённом хранилище Codemagic (не в Git).
+2. Выполнить `npm run release:validate`.
+3. Запустить Codemagic workflow `android-signed-release` и получить подписанный Android App Bundle (`.aab`).
+4. Заполнить карточку Google Play, Data Safety и ссылку на `privacy.html`.
+5. Проверить игру на телефонах 60/90/120 Гц и с разными вырезами экрана.
+6. Цифровые покупки в Google Play должны использовать Play Billing. В текущей версии они остаются недоступными в Android-сборке; StoreKit не переносится на Android автоматически.
 
 Идентификатор приложения: `com.amelin.ottisk`.
+
+Полная матрица устройств, команды QA и список внешних credentials: [RELEASE_QA.md](./RELEASE_QA.md).
