@@ -2304,6 +2304,38 @@ body {
   width: min(100%, 340px);
 }
 
+#screen-over.screen-over {
+  justify-content: flex-end;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+
+#screen-over .over-card {
+  margin: 0;
+  max-height: min(100%, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 48px));
+  width: min(100%, 360px);
+  overflow: hidden;
+  gap: 0;
+}
+
+#screen-over .over-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+}
+
+#screen-over .over-actions {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--foam) 14%, transparent);
+  background: color-mix(in srgb, var(--bg0) 88%, transparent);
+}
+
 .over-label {
   font-size: 11px;
   letter-spacing: 0.18em;

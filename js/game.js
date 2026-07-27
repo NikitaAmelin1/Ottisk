@@ -11266,7 +11266,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=80")
+      .register("./sw.js?v=81")
       .then((reg) => reg.update())
       .catch(() => {});
   }

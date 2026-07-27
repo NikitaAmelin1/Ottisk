@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=80" />
+  <link rel="stylesheet" href="css/style.css?v=81" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -361,42 +361,45 @@
       </div>
     </div>
 
-    <div id="screen-over" class="screen hidden">
+    <div id="screen-over" class="screen screen-over hidden">
       <div class="screen-bg dim" aria-hidden="true"></div>
       <div class="over-card">
-        <p class="over-label" data-i18n="run_broken">След оборвался</p>
-        <p class="brand over-brand">ОТТИСК</p>
-        <p id="final-score" class="final-score">0</p>
-        <p class="over-sub" data-i18n="light">света</p>
-        <p id="run-summary" class="run-summary"></p>
-        <p id="death-reason" class="death-reason"></p>
-        <p id="mut-summary" class="mut-summary"></p>
-        <p id="skin-result" class="skin-result"></p>
-        <p id="daily-result" class="daily-result"></p>
-        <p id="daily-mode-result" class="daily-result hidden"></p>
-        <p id="marks-result" class="marks-result"></p>
-        <p id="next-goal" class="next-goal"></p>
-        <div id="death-offers" class="death-offers hidden" aria-label="Следующий шаг"></div>
-        <p class="best">Рекорд <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
+        <div class="over-scroll">
+          <p class="over-label" data-i18n="run_broken">След оборвался</p>
+          <p class="brand over-brand">ОТТИСК</p>
+          <p id="final-score" class="final-score">0</p>
+          <p class="over-sub" data-i18n="light">света</p>
+          <p id="run-summary" class="run-summary"></p>
+          <p id="death-reason" class="death-reason"></p>
+          <p id="mut-summary" class="mut-summary"></p>
+          <p id="skin-result" class="skin-result"></p>
+          <p id="daily-result" class="daily-result"></p>
+          <p id="daily-mode-result" class="daily-result hidden"></p>
+          <p id="marks-result" class="marks-result"></p>
+          <p id="next-goal" class="next-goal"></p>
+          <div id="death-offers" class="death-offers hidden" aria-label="Следующий шаг"></div>
+          <p class="best">Рекорд <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
+        </div>
         <div class="over-actions over-actions-focused">
           <button id="btn-retry" class="btn btn-primary" type="button">
             <span class="btn-main" data-i18n="retry">Ещё раз</span>
             <span class="btn-sub">новый забег</span>
           </button>
-          <button id="btn-share" class="btn btn-secondary" type="button">
+          <button id="btn-menu" class="btn btn-secondary" type="button">
+            <span class="btn-main" data-i18n="menu">В меню</span>
+            <span class="btn-sub">на главный экран</span>
+          </button>
+          <button id="btn-share" class="btn btn-ghost over-secondary" type="button">
             <span class="btn-main" data-i18n="share">Поделиться</span>
             <span class="btn-sub" id="share-sub">Stories · волна и герой</span>
           </button>
-          <button id="btn-rate" class="btn btn-secondary hidden" type="button">
+          <button id="btn-rate" class="btn btn-ghost over-secondary hidden" type="button">
             <span class="btn-main">Оценить</span>
             <span class="btn-sub">если след понравился</span>
           </button>
           <button id="btn-buy-marks" class="btn btn-ghost over-secondary" type="button">
             <span class="btn-main">Купить следы</span>
             <span class="btn-sub">герои · косметика · continue</span>
-          </button>
-          <button id="btn-menu" class="btn btn-ghost" type="button">
-            <span class="btn-main" data-i18n="menu">В меню</span>
           </button>
         </div>
       </div>
@@ -410,7 +413,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v80";
+      const stamp = "ottisk-force-v81";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -439,6 +442,6 @@
   <script src="js/balance-tuner.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=80" type="module"></script>
+  <script src="js/game.js?v=81" type="module"></script>
 </body>
 </html>
