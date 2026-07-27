@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=84" />
+  <link rel="stylesheet" href="css/style.css?v=85" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -93,6 +93,10 @@
             <span class="btn-sub" id="btn-start-sub">первый забег сразу</span>
           </button>
         </div>
+        <button id="gift-cta" class="gift-cta hidden" type="button" aria-live="polite">
+          <span id="gift-cta-title" class="gift-cta-title">Подарок</span>
+          <span id="gift-cta-meta" class="gift-cta-meta"></span>
+        </button>
 
         <div id="control-list" class="control-row" role="group" aria-label="Управление"></div>
         <div class="mode-row" role="group" aria-label="Режимы">
@@ -166,6 +170,8 @@
             <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
           </div>
           <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
+          <p id="local-board-help" class="menu-note quiet" data-i18n="local_board_help">Лучшие результаты на этом устройстве.</p>
+          <ol id="local-leaderboard" class="cloud-leaderboard" aria-live="polite"></ol>
           <details class="advanced-tools">
             <summary class="menu-note quiet" data-i18n="advanced_cloud">Расширенные настройки облака</summary>
             <label class="cloud-api-label" for="cloud-api-input">
@@ -390,6 +396,13 @@
           <p id="marks-result" class="marks-result"></p>
           <p id="next-goal" class="next-goal"></p>
           <div id="death-offers" class="death-offers hidden" aria-label="Следующая цель" data-i18n-aria="next_goal"></div>
+          <div id="best-replay-wrap" class="best-replay-wrap hidden">
+            <canvas id="best-replay-canvas" class="best-replay-canvas" width="420" height="240" aria-label="Лучший след"></canvas>
+            <button id="btn-watch-best" class="btn btn-ghost" type="button">
+              <span class="btn-main" data-i18n="watch_best">Смотреть лучший забег</span>
+              <span class="btn-sub" data-i18n="best_path">короткий путь рекорда</span>
+            </button>
+          </div>
           <p class="best"><span data-i18n="record">Рекорд</span> <span id="best-over">0</span> · серия <span id="streak-over">0</span></p>
         </div>
         <div class="over-actions over-actions-focused">
@@ -425,7 +438,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v84";
+      const stamp = "ottisk-force-v85";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -439,7 +452,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "84");
+      url.searchParams.set("v", "85");
       location.replace(url.toString());
     })();
   </script>
@@ -453,8 +466,8 @@
   <script src="js/perf.js"></script>
   <script src="js/balance-tuner.js"></script>
   <script src="js/pwa.js"></script>
-  <script src="js/creature-art.js?v=84"></script>
+  <script src="js/creature-art.js?v=85"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=84" type="module"></script>
+  <script src="js/game.js?v=85" type="module"></script>
 </body>
 </html>
