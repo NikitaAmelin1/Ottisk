@@ -1,6 +1,51 @@
 # Cloud Mac build for Windows developers.
 # Docs: store/WINDOWS.md
 workflows:
+  android-signed-release:
+    name: Android Signed Release
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      # Create this keystore reference in Codemagic Teams > Code signing.
+      # Codemagic exposes CM_KEYSTORE_* variables without storing keys in Git.
+      android_signing:
+        - ottisk_release
+      vars:
+        PACKAGE_NAME: com.amelin.ottisk
+      node: v22.14.0
+      java: 21
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Validate release inputs
+        script: npm run release:validate
+      - name: Build Android App Bundle
+        script: |
+          npm run build:www
+          npx cap sync android
+          cd android
+          ./gradlew bundleRelease
+      - name: Sign Android App Bundle
+        script: |
+          UNSIGNED_AAB="$CM_BUILD_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+          SIGNED_AAB="$CM_BUILD_DIR/android/app/build/outputs/bundle/release/ottisk-release.aab"
+          test -f "$UNSIGNED_AAB"
+          test -n "$CM_KEYSTORE_PATH"
+          test -n "$CM_KEYSTORE_PASSWORD"
+          test -n "$CM_KEY_ALIAS"
+          test -n "$CM_KEY_PASSWORD"
+          jarsigner \
+            -keystore "$CM_KEYSTORE_PATH" \
+            -storepass:env CM_KEYSTORE_PASSWORD \
+            -keypass:env CM_KEY_PASSWORD \
+            -signedjar "$SIGNED_AAB" \
+            "$UNSIGNED_AAB" \
+            "$CM_KEY_ALIAS"
+          jarsigner -verify "$SIGNED_AAB"
+    artifacts:
+      - android/app/build/outputs/bundle/release/ottisk-release.aab
+      - android/app/build/reports/**
+
   ios-app-store:
     name: iOS App Store
     instance_type: mac_mini_m2

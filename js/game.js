@@ -554,13 +554,19 @@ const onboardLabelEl = document.getElementById("onboard-label");
 const onboardSubEl = document.getElementById("onboard-sub");
 const shareCanvasEl = document.getElementById("share-canvas");
 
-const RUN_EVENTS = [
+const BASE_RUN_EVENTS = [
   { id: "rain", title: "ливень света", dur: 4.2 },
   { id: "raid", title: "облава", dur: 3.2 },
   { id: "calm", title: "тишина", dur: 5.0 },
   { id: "comet", title: "комета", dur: 0.8 },
   { id: "sanctuary", title: "светлый сад", dur: 5.2 },
   { id: "blackout", title: "затмение", dur: 4.4 },
+];
+const RUN_EVENTS = [
+  ...BASE_RUN_EVENTS,
+  ...(window.OttiskContent?.DEFAULT_CATALOG?.events || [])
+    .filter((event) => !BASE_RUN_EVENTS.some((base) => base.id === event.id))
+    .map((event) => ({ id: event.id, title: event.name.toLowerCase(), dur: Math.min(12, event.duration) })),
 ];
 
 const DAILY_DEFS = [
@@ -749,6 +755,11 @@ const state = {
   runMode: "normal",
   qualityTier: "high",
   tuning: { hunterSpeed: 1, hungerDrain: 1, sparkInterval: 1 },
+  progressionEffects: {},
+  maxHunger: 100,
+  progressionRevives: 0,
+  replaySamples: [],
+  replaySampleAcc: 0,
   tipFlags: {
     move: false,
     hunter: false,
@@ -1185,7 +1196,7 @@ function updateHum(dt = 0.016) {
   humAcc += dt;
   if (humAcc < 0.07) return;
   humAcc = 0;
-  const urgency = 1 - state.hunger / 100;
+  const urgency = 1 - state.hunger / Math.max(1, state.maxHunger || 100);
   let hunterBoost = 0;
   for (const h of state.hunters) {
     const d2 = dist2(h.x, h.y, state.life.x, state.life.y);
@@ -1947,6 +1958,10 @@ function startRunEvent(def) {
   } else if (def.id === "blackout") {
     state.flash = Math.max(state.flash, 0.22);
     spawnHunter(false);
+  } else if (def.id === "light-bloom") {
+    for (let i = 0; i < 5; i += 1) spawnSpark({ edge: true, type: i === 0 ? "rare" : null });
+  } else if (def.id === "tangled-path") {
+    spawnHunter(false);
   }
 }
 
@@ -2094,7 +2109,7 @@ function updateGlyphs(dt) {
     state.glyphs.splice(i, 1);
     state.glyphIndex += 1;
     state.stats.glyphsTaken += 1;
-    state.hunger = clamp(state.hunger + 12, 0, 100);
+    state.hunger = clamp(state.hunger + 12, 0, state.maxHunger || 100);
     updateHungerUi();
     floatText(g.x, g.y - 10, g.ch, cssVar("--foam", "#f3eee8"), 20);
     sfxUiTap(state.glyphIndex);
@@ -2396,7 +2411,8 @@ function grantBossClear(id) {
   if (!state.running || !state.meta) return;
   const kind = String(id).includes("kraken") ? "kraken" : String(id).includes("leviathan") ? "leviathan" : "";
   if (!kind) return;
-  const reward = kind === "kraken" ? 25 : 12;
+  const baseReward = kind === "kraken" ? 25 : 12;
+  const reward = Math.max(1, Math.round(baseReward * (state.progressionEffects?.waveRewardMultiplier || 1)));
   state.meta.bossClears = state.meta.bossClears || { leviathan: 0, kraken: 0 };
   state.meta.bossClears[kind] = (state.meta.bossClears[kind] || 0) + 1;
   awardMarks(reward, {
@@ -2758,6 +2774,15 @@ function weekKey(date = new Date()) {
   return `${tmp.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+function normalizeProgression(value) {
+  const api = window.OttiskProgression;
+  if (!api) return value && typeof value === "object" ? value : null;
+  try {
+    if (api.validateState(value).valid) return api.deserialize(value);
+  } catch (_) {}
+  return api.createState();
+}
+
 function loadMeta() {
   let raw = null;
   try {
@@ -2800,6 +2825,11 @@ function loadMeta() {
       ? raw.reduceMotion
       : !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches,
     highContrast: !!raw?.highContrast,
+    largeUi: !!raw?.largeUi,
+    oneHand: ["off", "left", "right"].includes(raw?.oneHand) ? raw.oneHand : "off",
+    colorblind: ["off", "protanopia", "deuteranopia", "tritanopia"].includes(raw?.colorblind) ? raw.colorblind : "off",
+    progression: normalizeProgression(raw?.progression),
+    seenChapters: Array.isArray(raw?.seenChapters) ? raw.seenChapters.filter((id) => typeof id === "string") : [],
     // Returning players skip onboarding even if the flag was added later.
     onboarded: !!raw?.onboarded || best > 0 || marks > 0 || Math.max(0, Number(raw?.runs || 0)) > 0,
     starterGift: !!raw?.starterGift || best > 0 || marks > 0,
@@ -2874,6 +2904,13 @@ function loadMeta() {
       ? raw.ghostPath.filter((p) => p && typeof p.x === "number" && typeof p.y === "number").slice(0, GHOST_MAX_POINTS)
       : [],
     ghostScore: Math.max(0, Number(raw?.ghostScore || 0)),
+    lastReplay: raw?.lastReplay && Array.isArray(raw.lastReplay.samples)
+      ? {
+          score: Math.max(0, Number(raw.lastReplay.score || 0)),
+          durationMs: Math.max(250, Number(raw.lastReplay.durationMs || 250)),
+          samples: raw.lastReplay.samples.filter((sample) => Array.isArray(sample) && sample.length === 3).slice(0, 96),
+        }
+      : null,
     seasonalUnlocks: Array.isArray(raw?.seasonalUnlocks)
       ? raw.seasonalUnlocks.filter((id) => typeof id === "string")
       : [],
@@ -3440,7 +3477,7 @@ function trySeahorseRewind(hunter) {
   state.life.y = past.y;
   clampLife();
   state.lifeHistory = [];
-  state.hunger = clamp(state.hunger + 18, 0, 100);
+  state.hunger = clamp(state.hunger + 18, 0, state.maxHunger || 100);
   updateHungerUi();
   buzz([14, 22, 14]);
   sfxHeroAbility("seahorse");
@@ -3897,6 +3934,8 @@ function renderDaily() {
   renderDailyQuest();
   renderWeekly();
   renderSettings();
+  renderProgression();
+  renderStory();
   renderGifts();
 }
 
@@ -4026,10 +4065,130 @@ function renderWeekly() {
   weeklyCardEl.textContent = `неделя · ${quest.title} · ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
 }
 
+function progressionState() {
+  const api = window.OttiskProgression;
+  if (!api) return null;
+  if (!state.meta?.progression || !api.validateState(state.meta.progression).valid) {
+    state.meta.progression = api.createState();
+  }
+  return state.meta.progression;
+}
+
+function renderProgression() {
+  const api = window.OttiskProgression;
+  const progress = progressionState();
+  const points = document.getElementById("progression-points");
+  const tree = document.getElementById("skill-tree");
+  if (!api || !progress || !tree) return;
+  if (points) points.textContent = `${window.OttiskI18n?.locale === "en" ? "depth points" : "очки глубины"} · ${progress.available}`;
+  tree.textContent = "";
+  const english = window.OttiskI18n?.locale === "en";
+  const names = {
+    "steady-touch": ["Steady trail", "Increase maximum fullness by 8 per rank."],
+    "bright-core": ["Bright core", "Collected light is worth 10% more per rank."],
+    "quick-current": ["Quick current", "Movement speed grows by 5% per rank."],
+    "second-pulse": ["Second pulse", "Prevent defeat once per run."],
+    "deep-memory": ["Memory of the deep", "Boss rewards grow by 20%."],
+  };
+  for (const skill of api.SKILL_TREE) {
+    const rank = progress.spent[skill.id] || 0;
+    const eligibility = api.canSpend(progress, skill.id);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "skill-node";
+    button.disabled = !eligibility.ok;
+    const title = english ? names[skill.id]?.[0] || skill.name : skill.name;
+    const description = english ? names[skill.id]?.[1] || skill.description : skill.description;
+    const name = document.createElement("span");
+    name.className = "skill-node-name";
+    name.textContent = title;
+    const rankEl = document.createElement("span");
+    rankEl.className = "skill-node-rank";
+    rankEl.textContent = `${rank}/${skill.maxRank} · ${skill.cost}`;
+    const desc = document.createElement("span");
+    desc.className = "skill-node-desc";
+    desc.textContent = description;
+    button.append(name, rankEl, desc);
+    button.addEventListener("click", () => {
+      const result = api.spend(state.meta.progression, skill.id);
+      if (!result.ok) return;
+      state.meta.progression = result.state;
+      state.progressionEffects = api.effects(result.state);
+      saveMeta();
+      renderProgression();
+      showToast(`${title} · ${result.state.spent[skill.id]}`);
+    });
+    tree.appendChild(button);
+  }
+}
+
+function earnProgressionFromBest() {
+  const api = window.OttiskProgression;
+  const progress = progressionState();
+  if (!api || !progress) return;
+  const target = Math.min(20, Math.floor((state.meta.best || 0) / 100));
+  if (target <= progress.totalEarned) return;
+  const earned = target - progress.totalEarned;
+  state.meta.progression = api.earn(progress, earned);
+  saveMeta();
+  renderProgression();
+  showToast(`${window.OttiskI18n?.locale === "en" ? "depth point" : "очко глубины"} · +${earned}`);
+}
+
+function contentBiome(score = state.score) {
+  const biomes = window.OttiskContent?.DEFAULT_CATALOG?.biomes || [];
+  return biomes.find((biome) => score >= biome.depth[0] && score < biome.depth[1]) || biomes[biomes.length - 1] || null;
+}
+
+function storyChapter(score = state.meta?.best || 0) {
+  const chapters = window.OttiskContent?.DEFAULT_CATALOG?.chapters || [];
+  return [...chapters].filter((chapter) => score >= (chapter.unlock?.score || 0)).sort((a, b) => b.order - a.order)[0] || null;
+}
+
+function applyContentBiome() {
+  const biome = contentBiome();
+  if (!biome) return;
+  app.dataset.biome = biome.id;
+  if ((state.meta?.colorblind || "off") === "off" && !state.meta?.highContrast) {
+    app.style.setProperty("--bg0", biome.palette.background);
+    app.style.setProperty("--accent-a", biome.palette.accent);
+    app.style.setProperty("--danger", biome.palette.hazard);
+  } else {
+    app.style.removeProperty("--bg0");
+    app.style.removeProperty("--accent-a");
+    app.style.removeProperty("--danger");
+  }
+  refreshCssCache();
+}
+
+function renderStory() {
+  const chapter = storyChapter();
+  const biome = contentBiome(state.meta?.best || 0);
+  const chapterEl = document.getElementById("story-chapter");
+  const biomeEl = document.getElementById("story-biome");
+  if (chapterEl) chapterEl.textContent = chapter ? `${chapter.order}. ${chapter.name} · ${chapter.synopsis}` : "";
+  if (biomeEl) biomeEl.textContent = biome ? `${biome.name} · ${biome.description}` : "";
+}
+
+function syncStoryChapter() {
+  const chapter = storyChapter(state.score);
+  if (!chapter || !state.meta) return;
+  const seen = state.meta.seenChapters || [];
+  if (seen.includes(chapter.id)) return;
+  state.meta.seenChapters = [...seen, chapter.id];
+  saveMeta();
+  renderStory();
+  if (state.running) showMechanicCard(`chapter-${chapter.id}`, chapter.name, chapter.synopsis);
+}
+
 function applyAccessibilityPrefs() {
   if (!state.meta) return;
   app.classList.toggle("reduce-motion", !!state.meta.reduceMotion);
   app.classList.toggle("high-contrast", !!state.meta.highContrast);
+  app.classList.toggle("large-ui", !!state.meta.largeUi);
+  app.classList.toggle("one-hand-left", state.meta.oneHand === "left");
+  app.classList.toggle("one-hand-right", state.meta.oneHand === "right");
+  app.dataset.colorblind = state.meta.colorblind || "off";
   refreshCssCache();
 }
 
@@ -4087,6 +4246,27 @@ function renderSettings() {
     quality.textContent = names[mode];
     quality.classList.toggle("on", mode !== "auto");
     quality.setAttribute("aria-pressed", mode !== "auto" ? "true" : "false");
+  }
+  const largeUi = document.getElementById("btn-large-ui");
+  if (largeUi) {
+    largeUi.classList.toggle("on", !!state.meta.largeUi);
+    largeUi.setAttribute("aria-pressed", state.meta.largeUi ? "true" : "false");
+  }
+  const oneHand = document.getElementById("btn-one-hand");
+  if (oneHand) {
+    const value = state.meta.oneHand || "off";
+    oneHand.classList.toggle("on", value !== "off");
+    oneHand.setAttribute("aria-pressed", value !== "off" ? "true" : "false");
+    oneHand.textContent = value === "left"
+      ? tr("one_hand_left", "Левая рука")
+      : value === "right" ? tr("one_hand_right", "Правая рука") : tr("one_hand", "Управление одной рукой");
+  }
+  const colorblind = document.getElementById("btn-colorblind");
+  if (colorblind) {
+    const value = state.meta.colorblind || "off";
+    colorblind.classList.toggle("on", value !== "off");
+    colorblind.setAttribute("aria-pressed", value !== "off" ? "true" : "false");
+    colorblind.textContent = tr(`colorblind_${value}`, tr("colorblind_mode", "Цветовая схема"));
   }
   renderDifficultyPicker();
   renderControlPicker();
@@ -4734,6 +4914,7 @@ function applyThemeFromScore(announce = false) {
   if (!changed && !announce) return;
   state.theme = theme;
   app.dataset.theme = String(theme);
+  applyContentBiome();
   refreshCssCache();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", cssVar("--bg0", "#241828"));
   if (changed && announce && state.score >= 100) {
@@ -4754,7 +4935,7 @@ function updateScoreUi(pop = false) {
 }
 
 function updateHungerUi() {
-  const pct = Math.round(clamp(state.hunger, 0, 100));
+  const pct = Math.round(clamp((state.hunger / Math.max(1, state.maxHunger || 100)) * 100, 0, 100));
   if (uiCache.hunger !== pct) {
     uiCache.hunger = pct;
     heatFillEl.style.width = `${pct}%`;
@@ -4847,6 +5028,8 @@ function afterScoreChange(pop = false) {
   syncMutation();
   applyThemeFromScore(pop);
   checkScoreMilestones();
+  syncStoryChapter();
+  earnProgressionFromBest();
   evaluateDaily();
 }
 
@@ -5332,6 +5515,25 @@ function randGame(a = 0, b = 1) {
   return rand(a, b);
 }
 
+function recordReplaySample(action = 0, value = 0) {
+  const samples = state.replaySamples || (state.replaySamples = []);
+  const previous = samples[samples.length - 1]?.[0] ?? -1;
+  const time = Math.max(previous + 1, Math.round((state.elapsed || 0) * 1000));
+  samples.push([time, Math.max(0, Math.min(31, Math.round(action))), Math.max(-1000000, Math.min(1000000, Math.round(value)))]);
+  if (samples.length > 94) {
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    state.replaySamples = [first, ...samples.slice(1, -1).filter((_, index) => index % 2 === 0), last];
+  }
+}
+
+function replayPositionValue() {
+  if (!state.life) return 0;
+  const x = Math.round(clamp(state.life.x / Math.max(1, state.width), 0, 1) * 999);
+  const y = Math.round(clamp(state.life.y / Math.max(1, state.height), 0, 1) * 999);
+  return x * 1000 + y;
+}
+
 function sampleGhostPath(dt) {
   if (!state.life || !state.running) return;
   state.ghostSampleAcc += dt;
@@ -5453,8 +5655,16 @@ function finalizeGameOver(reason) {
   state.continueBusy = false;
   state.timeScale = 1;
   const isNewBest = state.score > (state.bestAtStart || 0);
+  recordReplaySample(4, replayPositionValue());
+  const replayDuration = Math.max(250, Math.round(state.elapsed * 1000), state.replaySamples.at(-1)?.[0] || 0);
+  const runReplay = {
+    score: state.score,
+    durationMs: replayDuration,
+    samples: state.replaySamples.slice(0, 96),
+  };
   if (state.meta) {
     state.meta.runs = Math.max(0, (state.meta.runs || 0) + 1);
+    state.meta.lastReplay = runReplay;
     if (state.tutorialRun) state.meta.onboarded = true;
     saveMeta();
   }
@@ -5492,8 +5702,13 @@ function finalizeGameOver(reason) {
     }
     state.meta.dailyBest = Math.max(state.meta.dailyBest || 0, state.score);
     saveMeta();
-    if (window.OttiskCloud?.isLinked?.()) {
-      window.OttiskCloud.submitDailyScore(state.score, state.meta.cloudName || "").catch(() => {});
+    if (window.OttiskSocial?.isAvailable?.()) {
+      window.OttiskSocial.submitDailyScore(
+        state.score,
+        state.meta.cloudName || "",
+        runReplay.durationMs,
+        runReplay.samples,
+      ).catch(() => {});
     }
   }
   evaluateTrophies({ wordDone: state.wordDone });
@@ -5958,46 +6173,7 @@ function rollSparkType() {
 }
 
 function maybeSpawnSuperStar() {
-  if (!state.running || state.score >= 100 || state.superStarEaten) return;
-  if (state.sparks.some((s) => s.type === "super")) return;
-  const ready = state.stats.sparkEats >= 1 || state.elapsed > 3.2;
-  if (!ready) return;
-  const margin = 56;
-  const side = Math.floor(Math.random() * 4);
-  let x = state.width * 0.72;
-  let y = state.height * 0.28;
-  if (side === 0) {
-    x = rand(margin, state.width - margin);
-    y = margin + 24;
-  } else if (side === 1) {
-    x = state.width - margin - 10;
-    y = rand(margin, state.height * 0.55);
-  } else if (side === 2) {
-    x = rand(margin, state.width - margin);
-    y = state.height - margin - 24;
-  } else {
-    x = margin + 10;
-    y = rand(margin, state.height * 0.55);
-  }
-  if (state.life && dist(x, y, state.life.x, state.life.y) < 110) {
-    x = clamp(state.width - state.life.x, margin, state.width - margin);
-    y = clamp(state.height * 0.25, margin, state.height - margin);
-  }
-  const profile = sparkProfile("super");
-  state.sparks.push({
-    x,
-    y,
-    vx: rand(-0.25, 0.25),
-    vy: rand(-0.25, 0.25),
-    pulse: Math.random() * Math.PI * 2,
-    tutorial: false,
-    grace: 0.55,
-    pinned: true,
-    ...profile,
-  });
-  state.superStarSpawned = true;
-  tipOnce("super", "ПУЛЬСАР", 1800);
-  floatText(x, y - 28, "ПУЛЬСАР", "#ff2f45", 18);
+  // Disabled: the early-game ПУЛЬСАР orb was too large and distracting.
 }
 
 function spawnComet() {
@@ -6147,7 +6323,12 @@ function resetRun() {
   state.score = 0;
   state.combo = 0;
   state.comboClock = 0;
-  state.hunger = 100;
+  state.progressionEffects = window.OttiskProgression?.effects?.(progressionState()) || {};
+  state.maxHunger = 100 + (state.progressionEffects.maxHunger || 0);
+  state.hunger = state.maxHunger;
+  state.progressionRevives = state.progressionEffects.revives || 0;
+  state.replaySamples = [[0, 0, 0]];
+  state.replaySampleAcc = 0;
   state.theme = 0;
   state.mutation = MUTATIONS[0];
   state.unlockedMuts = ["spark"];
@@ -6392,6 +6573,20 @@ function goToMenu() {
 
 function finishRun(reason) {
   if (!state.running) return;
+  if ((state.progressionRevives || 0) > 0) {
+    state.progressionRevives -= 1;
+    state.hunger = Math.max(state.hunger, (state.maxHunger || 100) * 0.55);
+    state.safeUntil = performance.now() + 2600;
+    if (!state.life) createLife(state.width * 0.5, state.height * 0.56, { silent: true });
+    for (const hunter of state.hunters) {
+      if (!hunter.boss) placeHunterOnEdge(hunter);
+      hunter.grace = Math.max(hunter.grace || 0, 1.5);
+    }
+    burst(state.life.x, state.life.y, cssVar("--life", "#7affd4"), 30, 6);
+    showCoach(window.OttiskI18n?.locale === "en" ? "SECOND PULSE" : "ВТОРОЙ ИМПУЛЬС", 1800, true);
+    goalChime();
+    return;
+  }
   state.running = false;
   state.paused = false;
   state.demo = false;
@@ -6441,6 +6636,7 @@ function onCanvasDown(e) {
   e.preventDefault();
   unlockAudio();
   const p = pointerPos(e);
+  recordReplaySample(1, Math.round(clamp(p.x / Math.max(1, state.width), 0, 1) * 999) * 1000 + Math.round(clamp(p.y / Math.max(1, state.height), 0, 1) * 999));
   try {
     canvas.setPointerCapture(e.pointerId);
   } catch (_) {
@@ -6576,7 +6772,7 @@ function updateJoystickMove(dt) {
   if (mag < 0.04) return;
   const prevX = state.life.x;
   const prevY = state.life.y;
-  const speed = STICK_SPEED * mag * (playerDifficulty().dash || 1);
+  const speed = STICK_SPEED * mag * (playerDifficulty().dash || 1) * (state.progressionEffects?.speedMultiplier || 1);
   state.life.x += nx * speed * dt;
   state.life.y += ny * speed * dt;
   applyLifeMove(prevX, prevY);
@@ -6621,6 +6817,7 @@ function onCanvasUp(e) {
   if (!state.touchActive) return;
   if (state.pointerId != null && e.pointerId !== state.pointerId) return;
   state.touchActive = false;
+  recordReplaySample(3, replayPositionValue());
   state.pointerId = null;
   state.stick = null;
   if (state.running) releaseLife();
@@ -6747,7 +6944,7 @@ function eatSpark(index, spark) {
   const moveFactor = state.life ? clamp((state.life.speed || 0) / 12, 0.2, 1) : 0.2;
   // AFK / standing eats barely refill hunger — must hunt light
   const restore = spark.restore * (0.35 + 0.65 * moveFactor);
-  state.hunger = clamp(state.hunger + restore, 0, 100);
+  state.hunger = clamp(state.hunger + restore, 0, state.maxHunger || 100);
   updateHungerUi();
   if (spark.type === "bait") {
     if (!inOpening()) spawnHunter(false);
@@ -6776,7 +6973,8 @@ function eatSpark(index, spark) {
   syncWave(true);
   playSparkTone(spark.type);
   eatSparkBlast(spark, openingEat);
-  addScore(spark.worth, spark.x, spark.y - 12, { color: spark.color });
+  const lightMultiplier = (state.progressionEffects?.lightMultiplier || 1) * (activeEventId() === "light-bloom" ? 1.5 : 1);
+  addScore(Math.max(1, Math.round(spark.worth * lightMultiplier)), spark.x, spark.y - 12, { color: spark.color });
   notePremiumEat();
 }
 
@@ -7041,6 +7239,8 @@ function updateHunters(dt) {
     if (activeEventId() === "raid") speed *= 1.08;
     if (activeEventId() === "sanctuary") speed *= 0.72;
     if (activeEventId() === "blackout") speed *= 1.12;
+    if (activeEventId() === "warm-current") speed *= 0.92;
+    if (activeEventId() === "tangled-path") speed *= 1.16;
     if (inInkDive()) speed *= 0.35;
     if (species === "dart" && hunter.dashT > 0) speed *= 2.05 * diff.dash;
     if (species === "shark" && hunter.dashT > 0) speed *= 1.75 * diff.dash;
@@ -7208,6 +7408,11 @@ function updateRun(dt) {
   }
   state.time += dt;
   state.elapsed += dt;
+  state.replaySampleAcc += dt;
+  if (state.replaySampleAcc >= 2.5) {
+    state.replaySampleAcc = 0;
+    recordReplaySample(state.touchActive ? 2 : 0, replayPositionValue());
+  }
   state.spawnAcc += dt;
   state.comboClock = Math.max(0, state.comboClock - dt);
   if (state.comboClock <= 0 && state.combo !== 0) {
@@ -10126,12 +10331,67 @@ function renderCloudStatus(text = "") {
   if (account) account.textContent = linked ? "Отключить" : tr("cloud_setup", "Подключить");
 }
 
+async function renderSocial() {
+  const profileEl = document.getElementById("social-profile");
+  const listEl = document.getElementById("social-list");
+  if (!profileEl || !listEl) return;
+  if (!window.OttiskSocial?.isAvailable?.()) {
+    profileEl.textContent = window.OttiskI18n?.locale === "en"
+      ? "Link cloud account to use friends"
+      : "подключи облако для друзей";
+    listEl.textContent = "";
+    return;
+  }
+  profileEl.textContent = tr("loading", "Загрузка…");
+  try {
+    const [profile, friends, league, duels] = await Promise.all([
+      window.OttiskSocial.profile(),
+      window.OttiskSocial.friends(),
+      window.OttiskSocial.seasonLeague(),
+      window.OttiskSocial.duels(),
+    ]);
+    profileEl.textContent = profile
+      ? `${profile.displayName || state.meta.cloudName || "ОТТИСК"} · ${profile.friendCode} · ${league?.league || "bronze"}${league?.rank ? ` #${league.rank}` : ""}`
+      : tr("error", "Ошибка");
+    listEl.textContent = "";
+    for (const friend of friends?.friends || []) {
+      const entry = document.createElement("div");
+      entry.className = "social-entry";
+      entry.textContent = `${friend.displayName} · ${friend.friendCode}`;
+      listEl.appendChild(entry);
+    }
+    for (const duel of (duels?.duels || []).slice(0, 4)) {
+      const entry = document.createElement("div");
+      entry.className = "social-entry";
+      const result = duel.status === "completed"
+        ? `${duel.outcome} · ${duel.challengerScore}:${duel.targetScore}`
+        : window.OttiskI18n?.locale === "en" ? "awaiting run" : "ждёт забега";
+      entry.textContent = `${window.OttiskI18n?.locale === "en" ? "duel" : "дуэль"} · ${duel.opponent.displayName} · ${result}`;
+      if (duel.status === "pending" && duel.role === "target" && state.meta.lastReplay) {
+        const accept = document.createElement("button");
+        accept.type = "button";
+        accept.className = "menu-link";
+        accept.textContent = window.OttiskI18n?.locale === "en" ? "Use last run" : "Принять последним забегом";
+        accept.addEventListener("click", async () => {
+          const replay = state.meta.lastReplay;
+          await window.OttiskSocial.completeDuel(duel.id, replay.score, replay.durationMs, replay.samples);
+          await renderSocial();
+        });
+        entry.append(" ", accept);
+      }
+      listEl.appendChild(entry);
+    }
+  } catch (error) {
+    profileEl.textContent = `${tr("error", "Ошибка")} · ${error.code || error.message}`;
+  }
+}
+
 function mergeCloudMeta(local, remote) {
   if (!remote || typeof remote !== "object") return local;
   const unionKeys = [
     "unlockedSkins", "premiumUnlocked", "unlockedHeroes", "unlockedTrails",
     "unlockedFrames", "seasonalUnlocks", "trophies", "seenRunTips",
-    "seenAbilityTips", "seenMechanicCards",
+    "seenAbilityTips", "seenMechanicCards", "seenChapters",
   ];
   const merged = { ...remote, ...local };
   for (const key of unionKeys) {
@@ -10142,6 +10402,19 @@ function mergeCloudMeta(local, remote) {
   }
   merged.iapHeroes = local.iapHeroes || [];
   merged.starterPackBought = !!local.starterPackBought;
+  const api = window.OttiskProgression;
+  if (api) {
+    const localProgress = api.validateState(local.progression).valid ? local.progression : api.createState();
+    const remoteProgress = api.validateState(remote.progression).valid ? remote.progression : api.createState();
+    const spent = {};
+    for (const skill of api.SKILL_TREE) {
+      const rank = Math.max(localProgress.spent[skill.id] || 0, remoteProgress.spent[skill.id] || 0);
+      if (rank) spent[skill.id] = rank;
+    }
+    const used = api.SKILL_TREE.reduce((sum, skill) => sum + (spent[skill.id] || 0) * skill.cost, 0);
+    const totalEarned = Math.max(used, localProgress.totalEarned, remoteProgress.totalEarned);
+    merged.progression = { version: api.STATE_VERSION, available: totalEarned - used, totalEarned, spent };
+  }
   return merged;
 }
 
@@ -10172,6 +10445,8 @@ function boot() {
   renderDaily();
   renderWeekly();
   renderSettings();
+  renderProgression();
+  renderStory();
   renderSkinMeta();
   renderHeroPicker();
   renderGifts();
@@ -10190,6 +10465,7 @@ function boot() {
   bindDrawHeroUi();
   window.OttiskAnalytics?.track("app_open");
   renderCloudStatus();
+  renderSocial();
   document.getElementById("btn-mode-daily")?.addEventListener("click", () => {
     if (!state.meta) return;
     state.meta.dailyModeEnabled = !state.meta.dailyModeEnabled;
@@ -10227,6 +10503,8 @@ function boot() {
     updateModeToggles();
     renderSettings();
     updateDonateThanks();
+    renderProgression();
+    renderStory();
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));
@@ -10365,6 +10643,27 @@ function boot() {
     renderSettings();
     showToast(document.getElementById("btn-quality")?.textContent || "качество");
   });
+  document.getElementById("btn-large-ui")?.addEventListener("click", () => {
+    state.meta.largeUi = !state.meta.largeUi;
+    saveMeta();
+    applyAccessibilityPrefs();
+    renderSettings();
+  });
+  document.getElementById("btn-one-hand")?.addEventListener("click", () => {
+    const values = ["off", "right", "left"];
+    state.meta.oneHand = values[(values.indexOf(state.meta.oneHand || "off") + 1) % values.length];
+    saveMeta();
+    applyAccessibilityPrefs();
+    renderSettings();
+  });
+  document.getElementById("btn-colorblind")?.addEventListener("click", () => {
+    const values = ["off", "protanopia", "deuteranopia", "tritanopia"];
+    state.meta.colorblind = values[(values.indexOf(state.meta.colorblind || "off") + 1) % values.length];
+    saveMeta();
+    applyAccessibilityPrefs();
+    applyThemeFromScore(false);
+    renderSettings();
+  });
   const installBackup = (imported) => {
     if (!state.meta || !imported) return false;
     const next = {
@@ -10433,6 +10732,7 @@ function boot() {
       if (!window.confirm("Отключить облачный аккаунт на этом устройстве?")) return;
       await window.OttiskCloud.logout();
       renderCloudStatus("аккаунт отключён · локальный прогресс сохранён");
+      renderSocial();
       return;
     }
     if (!ensureCloudEndpoint()) return;
@@ -10446,11 +10746,13 @@ function boot() {
         window.prompt("Сохраните код восстановления. Он показывается только один раз:", result.recoveryCode);
         await window.OttiskCloud.pushSave(state.meta);
         renderCloudStatus("аккаунт создан · код восстановления сохраните отдельно");
+        renderSocial();
       } else {
         const code = window.prompt("Введите код восстановления:", "");
         if (!code) return;
         await window.OttiskCloud.recover(code);
         renderCloudStatus("аккаунт восстановлен · нажмите «Синхронизировать»");
+        renderSocial();
       }
     } catch (error) {
       renderCloudStatus(`ошибка облака · ${error.code || error.message || "повторите позже"}`);
@@ -10509,6 +10811,43 @@ function boot() {
       const failed = document.createElement("li");
       failed.textContent = "рейтинг временно недоступен";
       list.appendChild(failed);
+    }
+  });
+  document.getElementById("btn-social-refresh")?.addEventListener("click", () => renderSocial());
+  document.getElementById("btn-social-add")?.addEventListener("click", async () => {
+    if (!window.OttiskSocial?.isAvailable?.()) {
+      showToast(window.OttiskI18n?.locale === "en" ? "link cloud first" : "сначала подключи облако");
+      return;
+    }
+    const code = window.prompt(window.OttiskI18n?.locale === "en" ? "Friend code:" : "Код друга:", "");
+    if (!code) return;
+    try {
+      await window.OttiskSocial.addFriend(code, state.meta.cloudName || "");
+      await renderSocial();
+    } catch (error) {
+      showToast(`${tr("error", "ошибка")} · ${error.code || error.message}`);
+    }
+  });
+  document.getElementById("btn-social-duel")?.addEventListener("click", async () => {
+    const replay = state.meta?.lastReplay;
+    if (!window.OttiskSocial?.isAvailable?.() || !replay) {
+      showToast(window.OttiskI18n?.locale === "en" ? "link cloud and finish a run first" : "подключи облако и заверши забег");
+      return;
+    }
+    const code = window.prompt(window.OttiskI18n?.locale === "en" ? "Friend code for duel:" : "Код друга для дуэли:", "");
+    if (!code) return;
+    try {
+      await window.OttiskSocial.createDuel(
+        code,
+        replay.score,
+        state.meta.cloudName || "",
+        replay.durationMs,
+        replay.samples,
+      );
+      await renderSocial();
+      showToast(window.OttiskI18n?.locale === "en" ? "duel sent" : "дуэль отправлена");
+    } catch (error) {
+      showToast(`${tr("error", "ошибка")} · ${error.code || error.message}`);
     }
   });
   const crashKey = "ottisk-crash-opt-in-v1";
