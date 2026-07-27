@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>ОТТИСК — галерея артов</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font: 14px/1.4 "Segoe UI", sans-serif;
+      background: #061018;
+      color: #e8f4ff;
+    }
+    h1 { margin: 16px 20px 8px; font-size: 18px; font-weight: 600; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      padding: 12px 16px 32px;
+    }
+    figure {
+      margin: 0;
+      background: radial-gradient(circle at 40% 30%, #143048, #071018 70%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas { display: block; width: 100%; height: auto; }
+    figcaption {
+      padding: 8px 10px 10px;
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Новые дизайны: еда, хищники, боссы, герои</h1>
+  <div class="grid" id="grid"></div>
+  <script src="../js/creature-art.js"></script>
+  <script>
+    function mixColor(a, b, t) {
+      const parse = (c) => {
+        if (c.startsWith("#")) {
+          const h = c.slice(1);
+          const n = h.length === 3
+            ? h.split("").map((x) => parseInt(x + x, 16))
+            : [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+          return n;
+        }
+        const m = c.match(/\d+/g);
+        return m ? m.slice(0, 3).map(Number) : [120, 120, 120];
+      };
+      const aa = parse(a), bb = parse(b);
+      return `rgb(${(aa[0] + (bb[0] - aa[0]) * t + 0.5) | 0},${(aa[1] + (bb[1] - aa[1]) * t + 0.5) | 0},${(aa[2] + (bb[2] - aa[2]) * t + 0.5) | 0})`;
+    }
+    const art = OttiskArtFactory({
+      mixColor,
+      cssVar: (_n, fallback) => fallback,
+      clamp: (v, a, b) => Math.max(a, Math.min(b, v)),
+      rand: (a, b) => a + Math.random() * (b - a),
+      lifeInkColor: () => "#6fd9b0",
+    });
+
+    const SIZE = 160;
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+    const pulse = 1.2;
+
+    const entries = [
+      ["еда · обычная", (c) => { art.use(c); art.drawLightOrb(cx, cy, 18, "#7affd4", pulse, 1, "normal"); }],
+      ["еда · редкая", (c) => { art.use(c); art.drawLightOrb(cx, cy, 20, "#ffe898", pulse, 1, "rare"); }],
+      ["еда · супер", (c) => { art.use(c); art.drawLightOrb(cx, cy, 22, "#ff9a62", pulse, 1, "super"); }],
+      ["seed", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#9be7ff", pulse, type: "seed" }); }],
+      ["ember", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#ff9a62", pulse, type: "ember" }); }],
+      ["mirror orb", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#c8f0ff", pulse, type: "mirror" }); }],
+      ["bait", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#ff7ab8", pulse, type: "bait" }); }],
+      ["deep", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#7aa0ff", pulse, type: "deep" }); }],
+      ["cool", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 16, color: "#9ee8ff", pulse, type: "cool" }); }],
+      ["comet", (c) => { art.use(c); art.drawSpark({ x: cx, y: cy, r: 14, color: "#ffe08a", pulse, comet: true, vx: 2, vy: 0.4 }); }],
+      ["хищник · рыба", (c) => { art.use(c); art.drawEvilFish({ x: cx, y: cy, r: 22, vx: 1, vy: 0.2, phase: 1 }); }],
+      ["dart", (c) => { art.use(c); art.drawDartHunter({ x: cx, y: cy, r: 18, vx: 1, vy: 0, phase: 1, dashT: 0.2 }); }],
+      ["jelly", (c) => { art.use(c); art.drawJellyHunter({ x: cx, y: cy, r: 22, pulse }); }],
+      ["eel hunter", (c) => { art.use(c); art.drawEelHunter({ x: cx, y: cy, r: 16, vx: 1, vy: 0, weave: 1 }); }],
+      ["shark", (c) => { art.use(c); art.drawSharkHunter({ x: cx, y: cy, r: 20, vx: 1, vy: 0 }); }],
+      ["ray", (c) => { art.use(c); art.drawRayHunter({ x: cx, y: cy, r: 20, vx: 1, vy: 0, weave: 1 }); }],
+      ["ghost", (c) => { art.use(c); art.drawGhostHunter({ x: cx, y: cy, r: 18, vx: 1, vy: 0, pulse, phaseAlpha: 0.85 }); }],
+      ["crab hunter", (c) => { art.use(c); art.drawCrabHunter({ x: cx, y: cy, r: 18, pulse }); }],
+      ["urchin", (c) => { art.use(c); art.drawUrchinHunter({ x: cx, y: cy, r: 18, pulse }); }],
+      ["mirror", (c) => { art.use(c); art.drawMirrorHunter({ x: cx, y: cy, r: 16, vx: 1, vy: 0, pulse }); }],
+      ["босс · левиафан", (c) => { art.use(c); art.drawBossHunter({ x: cx, y: cy, r: 26, vx: 1, vy: 0, pulse, bossPhase: "charge" }); }],
+      ["босс · кракен", (c) => { art.use(c); art.drawBossHunter({ x: cx, y: cy, r: 26, vx: 1, vy: 0, pulse, kraken: true, bossPhase: "ink_burst" }); }],
+      ["герой · осьминог", (c) => { art.use(c); art.drawInkPolyp({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["медуза", (c) => { art.use(c); art.drawJellyfish({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["черепаха", (c) => { art.use(c); art.drawTurtle({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["краб", (c) => { art.use(c); art.drawCrab({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["скат", (c) => { art.use(c); art.drawManta({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["удильщик", (c) => { art.use(c); art.drawAngler({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["наутилус", (c) => { art.use(c); art.drawNautilus({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["субмарина", (c) => { art.use(c); art.drawSubmarine({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["угорь", (c) => { art.use(c); art.drawEel({ x: cx, y: cy, r: 20, aim: 0, wobble: 1 }); }],
+      ["кальмар", (c) => { art.use(c); art.drawSquid({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["конёк", (c) => { art.use(c); art.drawSeahorse({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["кит", (c) => { art.use(c); art.drawWhale({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["дельфин", (c) => { art.use(c); art.drawDolphin({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+      ["звезда", (c) => { art.use(c); art.drawStarfish({ x: cx, y: cy, r: 22, aim: 0, wobble: 1 }); }],
+    ];
+
+    const grid = document.getElementById("grid");
+    for (const [label, draw] of entries) {
+      const fig = document.createElement("figure");
+      const canvas = document.createElement("canvas");
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const c = canvas.getContext("2d");
+      draw(c);
+      const cap = document.createElement("figcaption");
+      cap.textContent = label;
+      fig.append(canvas, cap);
+      grid.append(fig);
+    }
+  </script>
+</body>
+</html>
