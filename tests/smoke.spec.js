@@ -43,11 +43,13 @@ test("loads menu and opens a clear shop", async ({ page }) => {
 
 test("settings persist after reload", async ({ page }) => {
   await openGame(page);
+  await page.locator(".access-details > summary").click();
   await page.locator("#btn-reduce-motion").click();
   await page.locator("#btn-high-contrast").click();
   await expect(page.locator("#app")).toHaveClass(/reduce-motion/);
   await expect(page.locator("#app")).toHaveClass(/high-contrast/);
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".access-details > summary").click();
   await expect(page.locator("#btn-reduce-motion")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#btn-high-contrast")).toHaveAttribute("aria-pressed", "true");
 });

@@ -23,7 +23,7 @@
         },
         "depth": [
           0,
-          180
+          120
         ],
         "ambience": "reef"
       },
@@ -37,8 +37,8 @@
           "hazard": "#ff7b72"
         },
         "depth": [
-          180,
-          520
+          280,
+          480
         ],
         "ambience": "kelp"
       },
@@ -52,8 +52,8 @@
           "hazard": "#ff4f75"
         },
         "depth": [
-          520,
-          1200
+          720,
+          100000
         ],
         "ambience": "trench"
       },
@@ -68,7 +68,7 @@
         },
         "depth": [
           120,
-          360
+          280
         ],
         "ambience": "reef"
       },
@@ -82,8 +82,8 @@
           "hazard": "#ff5a4a"
         },
         "depth": [
-          300,
-          780
+          480,
+          720
         ],
         "ambience": "trench"
       }
