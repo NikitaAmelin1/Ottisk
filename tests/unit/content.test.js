@@ -8,6 +8,20 @@ await import("../../js/progression.js");
 const content = globalThis.OttiskContent;
 const progression = globalThis.OttiskProgression;
 
+test("biome depth bands are contiguous and non-overlapping", () => {
+  const biomes = [...content.DEFAULT_CATALOG.biomes].sort((a, b) => a.depth[0] - b.depth[0]);
+  assert.equal(biomes[0].depth[0], 0);
+  for (let i = 0; i < biomes.length; i += 1) {
+    assert.ok(biomes[i].depth[1] > biomes[i].depth[0]);
+    if (i > 0) assert.equal(biomes[i].depth[0], biomes[i - 1].depth[1]);
+  }
+  const samples = [0, 119, 120, 279, 280, 479, 480, 719, 720, 5000];
+  for (const score of samples) {
+    const hits = biomes.filter((b) => score >= b.depth[0] && score < b.depth[1]);
+    assert.equal(hits.length, 1, `score ${score} matched ${hits.map((b) => b.id).join(",")}`);
+  }
+});
+
 test("shipped content is valid, frozen, and matches the editable catalog", async () => {
   const diskCatalog = JSON.parse(
     await readFile(new URL("../../content/catalog.json", import.meta.url), "utf8"),

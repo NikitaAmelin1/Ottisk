@@ -6,7 +6,7 @@
       "name": "Светлый риф",
       "description": "Тёплое мелководье, где след впервые обретает форму.",
       "palette": { "background": "#123b5d", "accent": "#7affd4", "hazard": "#ffbd66" },
-      "depth": [0, 180],
+      "depth": [0, 120],
       "ambience": "reef"
     },
     {
@@ -14,7 +14,7 @@
       "name": "Собор водорослей",
       "description": "Тесные зелёные проходы скрывают быстрых охотников.",
       "palette": { "background": "#092f35", "accent": "#6edc8c", "hazard": "#ff7b72" },
-      "depth": [180, 520],
+      "depth": [280, 480],
       "ambience": "kelp"
     },
     {
@@ -22,7 +22,7 @@
       "name": "Полуночный разлом",
       "description": "Бездна отвечает на свет древним эхом.",
       "palette": { "background": "#050b21", "accent": "#a48cff", "hazard": "#ff4f75" },
-      "depth": [520, 1200],
+      "depth": [720, 100000],
       "ambience": "trench"
     },
     {
@@ -30,7 +30,7 @@
       "name": "Стеклянные отмели",
       "description": "Зеркальная вода отражает чужие следы и путает путь.",
       "palette": { "background": "#0a2a40", "accent": "#9be7ff", "hazard": "#ff9ad4" },
-      "depth": [120, 360],
+      "depth": [120, 280],
       "ambience": "reef"
     },
     {
@@ -38,7 +38,7 @@
       "name": "Тлеющие жерла",
       "description": "Тёплые выбросы несут угольки света и жёстких крабов.",
       "palette": { "background": "#1a1420", "accent": "#ff9a62", "hazard": "#ff5a4a" },
-      "depth": [300, 780],
+      "depth": [480, 720],
       "ambience": "trench"
     }
   ],
