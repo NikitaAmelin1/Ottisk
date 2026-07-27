@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "biomes": [
+    {
+      "id": "sunlit-reef",
+      "name": "Светлый риф",
+      "description": "Тёплое мелководье, где след впервые обретает форму.",
+      "palette": { "background": "#123b5d", "accent": "#7affd4", "hazard": "#ffbd66" },
+      "depth": [0, 180],
+      "ambience": "reef"
+    },
+    {
+      "id": "kelp-cathedral",
+      "name": "Собор водорослей",
+      "description": "Тесные зелёные проходы скрывают быстрых охотников.",
+      "palette": { "background": "#092f35", "accent": "#6edc8c", "hazard": "#ff7b72" },
+      "depth": [180, 520],
+      "ambience": "kelp"
+    },
+    {
+      "id": "midnight-trench",
+      "name": "Полуночный разлом",
+      "description": "Бездна отвечает на свет древним эхом.",
+      "palette": { "background": "#050b21", "accent": "#a48cff", "hazard": "#ff4f75" },
+      "depth": [520, 1200],
+      "ambience": "trench"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "first-imprint",
+      "name": "Первый отпечаток",
+      "order": 1,
+      "biomeIds": ["sunlit-reef"],
+      "synopsis": "Существо учится держаться за свет и оставлять след.",
+      "unlock": { "score": 0 }
+    },
+    {
+      "id": "green-choir",
+      "name": "Зелёный хор",
+      "order": 2,
+      "biomeIds": ["kelp-cathedral"],
+      "synopsis": "След проходит сквозь живой лабиринт и слышит чужой зов.",
+      "unlock": { "score": 240, "chapterId": "first-imprint" }
+    },
+    {
+      "id": "voice-below",
+      "name": "Голос снизу",
+      "order": 3,
+      "biomeIds": ["midnight-trench"],
+      "synopsis": "В глубине выясняется, кто оставил первый свет.",
+      "unlock": { "score": 650, "chapterId": "green-choir" }
+    }
+  ],
+  "enemies": [
+    {
+      "id": "dartfish",
+      "name": "Игла",
+      "archetype": "chaser",
+      "health": 1,
+      "speed": 1.25,
+      "damage": 18,
+      "behavior": { "tracking": 0.55, "telegraphMs": 500 },
+      "tags": ["swarm", "mobile"]
+    },
+    {
+      "id": "lantern-jelly",
+      "name": "Ложный фонарь",
+      "archetype": "zoning",
+      "health": 2,
+      "speed": 0.55,
+      "damage": 24,
+      "behavior": { "tracking": 0.15, "telegraphMs": 900 },
+      "tags": ["pulse", "hazard"]
+    },
+    {
+      "id": "trench-maw",
+      "name": "Пасть разлома",
+      "archetype": "boss",
+      "health": 24,
+      "speed": 0.7,
+      "damage": 40,
+      "behavior": { "tracking": 0.8, "telegraphMs": 1300 },
+      "tags": ["boss", "armored"]
+    }
+  ],
+  "waves": [
+    {
+      "id": "reef-awakening",
+      "name": "Пробуждение рифа",
+      "biomeId": "sunlit-reef",
+      "duration": 30,
+      "spawns": [{ "enemyId": "dartfish", "count": 5, "interval": 2.8, "start": 3 }],
+      "eventIds": ["warm-current"],
+      "reward": { "light": 30, "points": 1 }
+    },
+    {
+      "id": "kelp-ambush",
+      "name": "Засада в хоре",
+      "biomeId": "kelp-cathedral",
+      "duration": 45,
+      "spawns": [
+        { "enemyId": "dartfish", "count": 8, "interval": 2.1, "start": 2 },
+        { "enemyId": "lantern-jelly", "count": 3, "interval": 9, "start": 8 }
+      ],
+      "eventIds": ["tangled-path", "light-bloom"],
+      "reward": { "light": 55, "points": 1 }
+    },
+    {
+      "id": "maw-of-midnight",
+      "name": "Пасть полуночи",
+      "biomeId": "midnight-trench",
+      "duration": 70,
+      "spawns": [
+        { "enemyId": "lantern-jelly", "count": 4, "interval": 10, "start": 3 },
+        { "enemyId": "trench-maw", "count": 1, "interval": 1, "start": 15 }
+      ],
+      "eventIds": ["blackout", "light-bloom"],
+      "reward": { "light": 120, "points": 2 }
+    }
+  ],
+  "events": [
+    {
+      "id": "warm-current",
+      "name": "Тёплое течение",
+      "kind": "modifier",
+      "weight": 5,
+      "duration": 10,
+      "effects": { "speedMultiplier": 1.15 }
+    },
+    {
+      "id": "tangled-path",
+      "name": "Сплетение",
+      "kind": "hazard",
+      "weight": 3,
+      "duration": 12,
+      "effects": { "speedMultiplier": 0.8, "enemyRateMultiplier": 1.2 }
+    },
+    {
+      "id": "light-bloom",
+      "name": "Цветение света",
+      "kind": "reward",
+      "weight": 2,
+      "duration": 8,
+      "effects": { "lightMultiplier": 1.5 }
+    },
+    {
+      "id": "blackout",
+      "name": "Гашение",
+      "kind": "hazard",
+      "weight": 2,
+      "duration": 9,
+      "effects": { "visibilityMultiplier": 0.45, "enemyRateMultiplier": 1.3 }
+    }
+  ]
+}
