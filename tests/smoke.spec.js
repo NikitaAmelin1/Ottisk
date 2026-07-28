@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 const META_KEY = "ottisk-meta-v1";
-const FORCE_KEY = "ottisk-force-v76";
+const FORCE_KEY = "ottisk-force-v86";
+const SESSION_KEY = "ottisk-account-session-v1";
 
 async function openGame(page, overrides = {}) {
   const meta = {
@@ -18,13 +19,14 @@ async function openGame(page, overrides = {}) {
     haptics: false,
     ...overrides,
   };
-  await page.addInitScript(({ meta, forceKey }) => {
+  await page.addInitScript(({ meta, forceKey, sessionKey }) => {
     if (!localStorage.getItem("ottisk-meta-v1")) {
       localStorage.setItem("ottisk-meta-v1", JSON.stringify(meta));
       localStorage.setItem("ottisk-best-v2", String(meta.best || 0));
     }
     localStorage.setItem(forceKey, "1");
-  }, { meta, forceKey: FORCE_KEY });
+    localStorage.setItem(sessionKey, JSON.stringify({ mode: "guest" }));
+  }, { meta, forceKey: FORCE_KEY, sessionKey: SESSION_KEY });
   await page.goto("/index.html", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#btn-start")).toBeVisible();
 }
@@ -43,13 +45,14 @@ test("loads menu and opens a clear shop", async ({ page }) => {
 
 test("settings persist after reload", async ({ page }) => {
   await openGame(page);
-  await page.locator(".access-details > summary").click();
+  await page.locator("#btn-more").click();
+  await expect(page.locator("#screen-more")).toBeVisible();
   await page.locator("#btn-reduce-motion").click();
   await page.locator("#btn-high-contrast").click();
   await expect(page.locator("#app")).toHaveClass(/reduce-motion/);
   await expect(page.locator("#app")).toHaveClass(/high-contrast/);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(".access-details > summary").click();
+  await page.locator("#btn-more").click();
   await expect(page.locator("#btn-reduce-motion")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#btn-high-contrast")).toHaveAttribute("aria-pressed", "true");
 });
@@ -80,8 +83,10 @@ test("returning player reaches a live run", async ({ page }) => {
 
 test("new run modes persist and boss rush starts with a boss", async ({ page }) => {
   await openGame(page);
+  await page.locator("#btn-more").click();
   await page.locator('[data-run-mode="boss"]').click();
   await expect(page.locator('[data-run-mode="boss"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#btn-more-back").click();
   await page.locator("#btn-start").click();
   await page.locator("#btn-hero-next").click();
   await page.locator(".diff-pick-btn", { hasText: "лёгкий" }).click();
@@ -91,10 +96,26 @@ test("new run modes persist and boss rush starts with a boss", async ({ page }) 
 test("English menu persists across reload", async ({ page }) => {
   await openGame(page);
   await page.locator("#btn-lang").click();
-  await expect(page.locator(".btn-shop-top-main")).toHaveText("Shop");
+  await expect(page.locator("#btn-shop .btn-main")).toHaveText("Shop");
   await expect(page.locator("#btn-start .btn-main")).toHaveText("Play");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.locator(".btn-shop-top-main")).toHaveText("Shop");
+  await expect(page.locator("#btn-shop .btn-main")).toHaveText("Shop");
+});
+
+test("auth screen can create a local account", async ({ page }) => {
+  await page.addInitScript(({ forceKey }) => {
+    localStorage.setItem(forceKey, "1");
+    localStorage.removeItem("ottisk-account-session-v1");
+    localStorage.removeItem("ottisk-accounts-v1");
+  }, { forceKey: FORCE_KEY });
+  await page.goto("/index.html", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#screen-auth")).toBeVisible();
+  await page.locator("#auth-name").fill("Тестер");
+  await page.locator("#auth-email").fill("tester@ottisk.local");
+  await page.locator("#auth-password").fill("secret12");
+  await page.locator("#auth-form").evaluate((form) => form.requestSubmit());
+  await expect(page.locator("#screen-start")).toBeVisible({ timeout: 5000 });
+  await expect(page.locator("#account-chip")).toContainText(/Тестер|tester/i);
 });
 
 test("promotional page exposes SEO metadata and play link", async ({ page }) => {

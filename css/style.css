@@ -2696,3 +2696,246 @@ body {
     forced-color-adjust: none;
   }
 }
+
+/* —— Simplified home + auth —— */
+.screen-auth {
+  justify-content: center;
+  align-items: stretch;
+  padding:
+    calc(18px + var(--safe-top)) 22px
+    calc(18px + var(--safe-bottom));
+  overflow-y: auto;
+}
+
+.auth-shell,
+.more-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.auth-brand {
+  font-size: clamp(64px, 18vw, 96px);
+  margin: 0;
+}
+
+.auth-title {
+  margin: 14px 0 0;
+  font-family: "Syne", sans-serif;
+  font-size: clamp(24px, 7vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--foam);
+}
+
+.auth-lead {
+  margin: 8px 0 0;
+  max-width: 28ch;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--foam) 72%, #8ec8d8);
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.auth-tab {
+  appearance: none;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--foam) 16%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  color: color-mix(in srgb, var(--foam) 62%, transparent);
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-tab.on {
+  color: var(--foam);
+  border-color: color-mix(in srgb, var(--life) 45%, transparent);
+  background: color-mix(in srgb, var(--life) 12%, transparent);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--foam) 58%, transparent);
+}
+
+.auth-field input {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--foam) 18%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, #061424 78%, transparent);
+  color: var(--foam);
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.auth-field input:focus {
+  outline: 2px solid color-mix(in srgb, var(--life) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.auth-error {
+  margin: 0;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff8a9a;
+}
+
+.auth-guest {
+  margin-top: 18px;
+  align-self: flex-start;
+}
+
+.auth-lang {
+  margin-top: 16px;
+  align-self: flex-start;
+}
+
+.menu-main-simple {
+  flex: 1;
+  justify-content: center;
+  padding: 28px 0 24px;
+  min-height: min(62vh, 560px);
+}
+
+.menu-main-simple .menu-brand {
+  font-size: clamp(84px, 24vw, 128px);
+}
+
+.menu-main-simple .menu-lead {
+  margin-top: 16px;
+  max-width: 16ch;
+  font-size: 16px;
+}
+
+.menu-home-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: min(100%, 360px);
+  margin-top: 14px;
+  animation: menu-rise 0.75s 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.menu-home-btn {
+  min-height: 64px;
+  width: 100%;
+}
+
+.menu-home-btn .btn-main {
+  font-size: 16px;
+}
+
+.home-thanks {
+  margin-top: 18px;
+}
+
+.menu-account {
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screen-more {
+  justify-content: flex-start;
+}
+
+.more-shell {
+  width: 100%;
+  padding-top: 4px;
+}
+
+.more-shell .flow-back {
+  align-self: flex-start;
+}
+
+.more-shell .flow-title {
+  margin-top: 8px;
+}
+
+.more-shell .menu-more {
+  margin-top: 12px;
+  padding-bottom: 24px;
+}
+
+.gift-cta {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: min(100%, 360px);
+  margin-top: 16px;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--foam) 12%, transparent);
+  background: transparent;
+  color: var(--foam);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gift-cta.hidden {
+  display: none;
+}
+
+.gift-cta.ready .gift-cta-title {
+  color: var(--gold);
+}
+
+.gift-cta-title {
+  font-family: "Syne", sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.gift-cta-meta {
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--foam) 64%, transparent);
+}
+
+@media (max-width: 420px) {
+  .menu-home-actions {
+    grid-template-columns: 1fr;
+  }
+}

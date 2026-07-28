@@ -34,6 +34,8 @@ async function route(request, env) {
     return json({ ok: true }, 200, request, env);
   }
   if (path === "/v1/register" && request.method === "POST") return register(request, env);
+  if (path === "/v1/register/email" && request.method === "POST") return registerEmail(request, env);
+  if (path === "/v1/login" && request.method === "POST") return loginEmail(request, env);
   if (path === "/v1/recover" && request.method === "POST") return recover(request, env);
   if (path === "/v1/logout" && request.method === "POST") return logout(request, env);
   if (path === "/v1/save" && request.method === "GET") return getSave(request, env);
@@ -223,6 +225,62 @@ async function register(request, env) {
     ).bind(accountId, recoveryHash).run();
     const sessionToken = await createSession(env, accountId);
     return json({ accountId, recoveryCode: code, sessionToken }, 201, request, env);
+  });
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase().slice(0, 120);
+}
+
+function validEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length >= 5 && email.length <= 120;
+}
+
+function validPassword(password) {
+  const value = String(password || "");
+  return value.length >= 6 && value.length <= 72;
+}
+
+async function registerEmail(request, env) {
+  return guarded(request, env, async () => {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!validEmail(email)) throw new ApiError("invalid_email", 400);
+    if (!validPassword(password)) throw new ApiError("invalid_password", 400);
+    const existing = await env.DB.prepare(
+      "SELECT id FROM accounts WHERE email = ?",
+    ).bind(email).first();
+    if (existing) throw new ApiError("email_taken", 409);
+    const accountId = crypto.randomUUID();
+    const code = recoveryCode();
+    const recoveryHash = await hash(normalizeRecovery(code), env.TOKEN_PEPPER || "");
+    const passwordHash = await hash(`email\0${email}\0${password}`, env.TOKEN_PEPPER || "");
+    await env.DB.prepare(
+      "INSERT INTO accounts (id, recovery_hash, email, password_hash) VALUES (?, ?, ?, ?)",
+    ).bind(accountId, recoveryHash, email, passwordHash).run();
+    if (body.displayName !== undefined) {
+      await ensureSocialProfile(env, accountId, body.displayName);
+    }
+    const sessionToken = await createSession(env, accountId);
+    return json({ accountId, recoveryCode: code, sessionToken }, 201, request, env);
+  });
+}
+
+async function loginEmail(request, env) {
+  return guarded(request, env, async () => {
+    const body = await readJson(request);
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
+    if (!validEmail(email) || !validPassword(password)) throw new ApiError("bad_credentials", 401);
+    const account = await env.DB.prepare(
+      "SELECT id, password_hash FROM accounts WHERE email = ?",
+    ).bind(email).first();
+    if (!account?.password_hash) throw new ApiError("bad_credentials", 401);
+    const passwordHash = await hash(`email\0${email}\0${password}`, env.TOKEN_PEPPER || "");
+    if (passwordHash !== account.password_hash) throw new ApiError("bad_credentials", 401);
+    const sessionToken = await createSession(env, account.id);
+    return json({ accountId: account.id, sessionToken }, 200, request, env);
   });
 }
 

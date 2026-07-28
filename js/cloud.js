@@ -140,15 +140,46 @@
     }
   }
 
-  async function register() {
-    if (!isEnabled()) return null;
-    const result = await api("/v1/register", { method: "POST", body: {}, auth: false });
+  function storeAuth(result) {
     storageSet(AUTH_KEY, JSON.stringify({
       accountId: result.accountId,
       sessionToken: result.sessionToken,
     }));
     void sync();
     return result;
+  }
+
+  async function register() {
+    if (!isEnabled()) return null;
+    const result = await api("/v1/register", { method: "POST", body: {}, auth: false });
+    return storeAuth(result);
+  }
+
+  async function registerEmail({ email, password, displayName } = {}) {
+    if (!isEnabled()) return null;
+    const result = await api("/v1/register/email", {
+      method: "POST",
+      body: {
+        email: String(email || "").trim().toLowerCase(),
+        password: String(password || ""),
+        displayName: String(displayName || "").slice(0, 24),
+      },
+      auth: false,
+    });
+    return storeAuth(result);
+  }
+
+  async function loginEmail({ email, password } = {}) {
+    if (!isEnabled()) return null;
+    const result = await api("/v1/login", {
+      method: "POST",
+      body: {
+        email: String(email || "").trim().toLowerCase(),
+        password: String(password || ""),
+      },
+      auth: false,
+    });
+    return storeAuth(result);
   }
 
   async function recover(recoveryCode) {
@@ -158,12 +189,7 @@
       body: { recoveryCode: String(recoveryCode || "") },
       auth: false,
     });
-    storageSet(AUTH_KEY, JSON.stringify({
-      accountId: result.accountId,
-      sessionToken: result.sessionToken,
-    }));
-    void sync();
-    return result;
+    return storeAuth(result);
   }
 
   function loadQueue() {
@@ -437,7 +463,10 @@
   global.OttiskCloud = Object.freeze({
     configure,
     register,
+    registerEmail,
+    loginEmail,
     recover,
+    isEnabled,
     isLinked,
     pushSave,
     pullSave,
