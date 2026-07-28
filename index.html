@@ -284,6 +284,7 @@
               <span class="btn-donate-sub">поддержать игру</span>
             </button>
             <a href="./landing.html" data-i18n="about">О игре</a>
+            <a href="./trailer.html">Трейлер</a>
             <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
             <a href="./support.html" data-i18n="support">Поддержка</a>
             <details class="advanced-tools foot-advanced">
@@ -438,6 +439,10 @@
           <span class="btn-main" id="continue-label">Продолжить</span>
           <span class="btn-sub" id="continue-sub">бесплатно · 1 раз</span>
         </button>
+        <button id="btn-continue-rewarded" class="btn btn-secondary hidden" type="button">
+          <span class="btn-main">Продолжить · реклама</span>
+          <span class="btn-sub">короткое видео · 1 раз</span>
+        </button>
         <button id="btn-continue-iap" class="btn btn-secondary hidden" type="button">
           <span class="btn-main">Продолжить · 10 ₽</span>
           <span class="btn-sub">App Store / донат</span>
@@ -511,7 +516,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v87";
+      const stamp = "ottisk-force-v88";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {

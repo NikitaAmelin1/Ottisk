@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const META_KEY = "ottisk-meta-v1";
-const FORCE_KEY = "ottisk-force-v87";
+const FORCE_KEY = "ottisk-force-v88";
 const SESSION_KEY = "ottisk-account-session-v1";
 
 async function openGame(page, overrides = {}) {

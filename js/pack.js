@@ -21,6 +21,7 @@
     { id: "ghost", title: "Свой призрак", sub: "столкнись с призраком", check: (ctx) => !!ctx.meta?.trophyGhost },
     { id: "leviathan_clear", title: "За кольцом", sub: "переживи левиафана", check: (ctx) => (ctx.meta?.bossClears?.leviathan || 0) > 0 },
     { id: "kraken_clear", title: "Чернильный след", sub: "переживи кракена", check: (ctx) => (ctx.meta?.bossClears?.kraken || 0) > 0 },
+    { id: "maw_clear", title: "Пасть закрыта", sub: "переживи пасть бездны", check: (ctx) => (ctx.meta?.bossClears?.maw || 0) > 0 },
     { id: "weekly", title: "Испытание недели", sub: "заверши недельное задание", check: (ctx) => !!ctx.meta?.weekRewardTaken },
     { id: "endless", title: "За горизонтом", sub: "начни бесконечный забег", check: (ctx) => !!ctx.meta?.trophyEndless },
     { id: "boss_rush", title: "Зов титанов", sub: "вызови череду боссов", check: (ctx) => !!ctx.meta?.trophyBossRush },

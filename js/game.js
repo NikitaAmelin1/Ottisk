@@ -3,7 +3,7 @@ import "./pack.js";
 const BEST_KEY = "ottisk-best-v2";
 const META_KEY = "ottisk-meta-v1";
 const HOLD_SECONDS = 0.62;
-const OPENING_SEC = 10;
+const OPENING_SEC = 12;
 const HUNGER_DRAIN_PER_SEC = 100 / 12;
 const ECHO_FADE_SEC = 2.35;
 const FREE_CONTINUES_PER_RUN = 1;
@@ -81,9 +81,8 @@ const DONATE_TIPS = [
 ];
 const THEME_COUNT = 8;
 const ONBOARD_STEPS = [
-  "Удерживай палец — существо живёт только в касании.",
-  "Лови живой свет — он прыгает и крутится.",
-  "Счёт растёт — волны меняют хищников: стая, стрелки… и дальше до бездны.",
+  "Удерживай палец — существо живёт, пока касание активно.",
+  "Лови свет. Отпустишь палец — забег оборвётся.",
 ];
 const SECRET_WORD = "ЯЕЩЁЗДЕСЬ";
 const SCORE_MILESTONES = [
@@ -198,6 +197,8 @@ const HEROES = [
   { id: "crab", name: "краб", glyph: "Кр", ability: "щит", tip: "ЩИТ НА 1 УДАР" },
   { id: "dolphin", name: "дельфин", glyph: "Де", ability: "быстрый рывок", tip: "РЫВОК ПЕРЕЗАРЯЖАЕТСЯ БЫСТРЕЕ" },
   { id: "starfish", name: "морская звезда", glyph: "Зв", ability: "регенерация", tip: "ГОЛОД УХОДИТ МЕДЛЕННЕЕ" },
+  { id: "seal", name: "нерпа", glyph: "Не", ability: "скользкий рывок", tip: "РЫВОК + КОРОТКАЯ НЕУЯЗВИМОСТЬ", premium: true, cost: 40, blurb: "скользит мимо ударов" },
+  { id: "lantern", name: "фонарик", glyph: "Фо", ability: "пульс света", tip: "ИМПУЛЬС ТЯНЕТ СВЕТ К ТЕБЕ", premium: true, cost: 90, blurb: "магнит света" },
   { id: "manta", name: "скат", glyph: "Ск", ability: "крыло-шторм", tip: "РЫВОК РЕЖЕТ И ОСТАВЛЯЕТ СЛЕД", premium: true, cost: 60, blurb: "рывки рвут строй" },
   { id: "angler", name: "удильщик", glyph: "Уд", ability: "манок света", tip: "ФОНАРЬ ТЯНЕТ СВЕТ И ТОРМОЗИТ", premium: true, cost: 110, blurb: "свет плывёт к тебе" },
   { id: "nautilus", name: "наутилус", glyph: "На", ability: "2 раковины", tip: "ДВЕ РАКОВИНЫ · ПОТОМ ВОССТАНОВЛЕНИЕ", premium: true, cost: 170, blurb: "двойная броня" },
@@ -445,6 +446,18 @@ const WAVES = [
     label: "ВОЛНА 8 · ПРИЗРАКИ",
   },
   {
+    id: "trench_maw",
+    at: 600,
+    name: "пасть бездны",
+    species: "boss",
+    maxBonus: 0,
+    speedMul: 0.92,
+    intervalMul: 8,
+    boss: true,
+    maw: true,
+    label: "БОСС · ПАСТЬ БЕЗДНЫ",
+  },
+  {
     id: "abyss",
     at: 660,
     name: "бездна",
@@ -452,7 +465,7 @@ const WAVES = [
     maxBonus: 2,
     speedMul: 1.08,
     intervalMul: 0.82,
-    label: "ВОЛНА 9 · БЕЗДНА",
+    label: "ВОЛНА 10 · БЕЗДНА",
   },
   {
     id: "kraken",
@@ -473,7 +486,7 @@ const WAVES = [
     maxBonus: 3,
     speedMul: 1.14,
     intervalMul: 0.76,
-    label: "ВОЛНА 11 · ТИТАНЫ",
+    label: "ВОЛНА 12 · ТИТАНЫ",
   },
 ];
 
@@ -561,6 +574,7 @@ const BASE_RUN_EVENTS = [
   { id: "comet", title: "комета", dur: 0.8 },
   { id: "sanctuary", title: "светлый сад", dur: 5.2 },
   { id: "blackout", title: "затмение", dur: 4.4 },
+  { id: "tidepull", title: "тяга прилива", dur: 4.8 },
 ];
 const RUN_EVENTS = [
   ...BASE_RUN_EVENTS,
@@ -641,7 +655,17 @@ const WEEKLY_DEFS = [
     value: () => state.stats.rareEats,
     mode: "sum",
   },
+  {
+    id: "boss_touch",
+    title: "Переживи босса",
+    target: 1,
+    unit: "боссов",
+    value: () => state.stats.bossClearsThisRun || 0,
+    mode: "sum",
+  },
 ];
+const LOCAL_BOARD_KEY = "ottisk-local-board-v1";
+const LOCAL_BOARD_MAX = 10;
 
 const state = {
   running: false,
@@ -779,7 +803,9 @@ const state = {
     nearMisses: 0,
     shadowsSpawned: 0,
     glyphsTaken: 0,
+    bossClearsThisRun: 0,
   },
+  rewardedContinueUsed: false,
   audio: null,
   humNode: null,
   demoClock: 0,
@@ -1293,6 +1319,7 @@ function showMoreMenu() {
   renderStory();
   renderAccountUi();
   renderCloudStatus();
+  renderLocalLeaderboard();
   syncMenuMusic();
 }
 
@@ -2156,6 +2183,9 @@ function startRunEvent(def) {
     spawnSpark({ edge: true, type: "mirror" });
   } else if (def.id === "ember-rain") {
     for (let i = 0; i < 4; i += 1) spawnSpark({ edge: true, type: i === 0 ? "ember" : null });
+  } else if (def.id === "tidepull") {
+    state.eventRainAcc = 0;
+    for (let i = 0; i < 3; i += 1) spawnSpark({ edge: true, type: i === 0 ? "rare" : null });
   }
 }
 
@@ -2174,6 +2204,16 @@ function updateRunEvents(dt) {
       while (state.eventRainAcc >= 0.8) {
         state.eventRainAcc -= 0.8;
         spawnSpark({ edge: true, type: Math.random() < 0.22 ? "rare" : null });
+      }
+    }
+    if (state.event.id === "tidepull" && state.life) {
+      for (const spark of state.sparks) {
+        if (spark.comet) continue;
+        const d = dist(spark.x, spark.y, state.life.x, state.life.y);
+        if (d < 10 || d > 280) continue;
+        const pull = (1 - d / 280) * 0.28;
+        spark.vx += ((state.life.x - spark.x) / d) * pull;
+        spark.vy += ((state.life.y - spark.y) / d) * pull;
       }
     }
     if (state.event.t <= 0) {
@@ -2439,13 +2479,13 @@ function difficultyScale() {
 function midgamePace() {
   const s = state.score || 0;
   let pace = 1;
-  if (s < 30) pace = 1;
-  else if (s < 80) pace = 0.88;
-  else if (s < 150) pace = 0.82;
-  else if (s < 240) pace = 0.85;
-  else if (s < 340) pace = 0.9;
-  else if (s < 460) pace = 0.93;
-  else if (s < 600) pace = 0.96;
+  if (s < 40) pace = 1;
+  else if (s < 90) pace = 0.86;
+  else if (s < 160) pace = 0.78;
+  else if (s < 250) pace = 0.82;
+  else if (s < 360) pace = 0.88;
+  else if (s < 480) pace = 0.92;
+  else if (s < 620) pace = 0.95;
   else pace = 1;
   // Easy stays gentler late; hard keeps more pressure.
   if (playerDifficulty().id === "easy") pace *= 0.94;
@@ -2464,40 +2504,51 @@ function midgamePace() {
 
 const waveLabelEl = document.getElementById("wave-label");
 
+function bossKindForStage(stage) {
+  const cycle = Math.max(0, stage) % 3;
+  if (cycle === 1) return "maw";
+  if (cycle === 2) return "kraken";
+  return "leviathan";
+}
+
 function waveForScore(score = state.score) {
   if (state.runMode === "boss") {
     const stage = Math.max(0, Math.floor(score / 90));
-    const kraken = stage % 2 === 1;
+    const kind = bossKindForStage(stage);
+    const title = kind === "kraken" ? "кракен" : kind === "maw" ? "пасть бездны" : "левиафан";
     return {
-      id: `rush-${kraken ? "kraken" : "leviathan"}-${stage}`,
+      id: `rush-${kind}-${stage}`,
       at: stage * 90,
-      name: kraken ? "кракен" : "левиафан",
+      name: title,
       species: "boss",
       maxBonus: 0,
       speedMul: 0.9 + Math.min(0.35, stage * 0.035),
       intervalMul: 8,
       boss: true,
-      kraken,
+      kraken: kind === "kraken",
+      maw: kind === "maw",
       index: stage,
-      label: `БОСС ${stage + 1} · ${kraken ? "КРАКЕН" : "ЛЕВИАФАН"}`,
+      label: `БОСС ${stage + 1} · ${title.toUpperCase()}`,
     };
   }
   if (state.runMode === "endless" && score >= 900) {
     const stage = Math.floor((score - 900) / 120);
     const boss = stage > 0 && stage % 4 === 0;
-    const kraken = boss && stage % 8 === 0;
+    const kind = boss ? bossKindForStage(Math.floor(stage / 4)) : "";
+    const title = kind === "kraken" ? "кракен" : kind === "maw" ? "пасть бездны" : "левиафан";
     return {
-      id: `endless-${boss ? (kraken ? "kraken" : "leviathan") : "deep"}-${stage}`,
+      id: `endless-${boss ? kind : "deep"}-${stage}`,
       at: 900 + stage * 120,
-      name: boss ? (kraken ? "кракен" : "левиафан") : `глубина ${stage + 1}`,
+      name: boss ? title : `глубина ${stage + 1}`,
       species: boss ? "boss" : "mix",
       maxBonus: boss ? 0 : Math.min(7, 3 + Math.floor(stage / 2)),
       speedMul: Math.min(1.55, 1.14 + stage * 0.035),
       intervalMul: boss ? 8 : Math.max(0.5, 0.76 - stage * 0.018),
       boss,
-      kraken,
+      kraken: kind === "kraken",
+      maw: kind === "maw",
       index: WAVES.length + stage,
-      label: boss ? `БЕСКОНЕЧНЫЙ БОСС · ${kraken ? "КРАКЕН" : "ЛЕВИАФАН"}` : `БЕСКОНЕЧНОСТЬ · ${stage + 1}`,
+      label: boss ? `БЕСКОНЕЧНЫЙ БОСС · ${title.toUpperCase()}` : `БЕСКОНЕЧНОСТЬ · ${stage + 1}`,
     };
   }
   let current = WAVES[0];
@@ -2571,25 +2622,26 @@ function spawnBoss() {
   const point = hunterSpawnPointAwayFromPlayer();
   const activeWave = waveForScore();
   const isKraken = !!activeWave.kraken || state.waveId === "kraken" || state.waveId.includes("kraken");
+  const isMaw = !!activeWave.maw || state.waveId === "trench_maw" || state.waveId.includes("maw") || state.waveId.includes("trench");
   const boss = {
     x: point.x,
     y: point.y,
     vx: 0,
     vy: 0,
-    r: isKraken ? 46 : 40,
-    anger: isKraken ? 1.18 : 1.08,
+    r: isKraken ? 46 : isMaw ? 44 : 40,
+    anger: isKraken ? 1.18 : isMaw ? 1.12 : 1.08,
     slow: false,
     warn: 1.2,
     phase: Math.random() * Math.PI * 2,
     nearMissed: false,
     grace: 1.8,
     orbit: Math.random() * Math.PI * 2,
-    orbitR: isKraken ? 168 : 150,
-    orbitSpeed: isKraken ? 1.05 : 0.85,
+    orbitR: isKraken ? 168 : isMaw ? 158 : 150,
+    orbitSpeed: isKraken ? 1.05 : isMaw ? 0.72 : 0.85,
     species: "boss",
     boss: true,
     bossPhase: "orbit",
-    bossTimer: isKraken ? 1.8 : 2.4,
+    bossTimer: isKraken ? 1.8 : isMaw ? 2.1 : 2.4,
     chargeTx: 0,
     chargeTy: 0,
     dashCd: 0,
@@ -2598,6 +2650,7 @@ function spawnBoss() {
     weave: Math.random() * Math.PI * 2,
     phaseAlpha: 1,
     kraken: isKraken,
+    maw: isMaw,
     attackCount: 0,
     chainCharges: 0,
   };
@@ -2606,6 +2659,11 @@ function spawnBoss() {
     tipOnce("boss-kraken", "КРАКЕН", 1900, {
       persist: true,
       first: "Кракен. Быстрее левиафана — держи дистанцию.",
+    });
+  } else if (isMaw) {
+    tipOnce("boss-maw", "ПАСТЬ БЕЗДНЫ", 1900, {
+      persist: true,
+      first: "Пасть тянет к себе. Кружи шире и лови окна.",
     });
   } else {
     tipOnce("boss", "ЛЕВИАФАН", 1900, {
@@ -2622,21 +2680,35 @@ function spawnBoss() {
 
 function grantBossClear(id) {
   if (!state.running || !state.meta) return;
-  const kind = String(id).includes("kraken") ? "kraken" : String(id).includes("leviathan") ? "leviathan" : "";
+  const raw = String(id);
+  const kind = raw.includes("kraken")
+    ? "kraken"
+    : raw.includes("maw") || raw.includes("trench")
+      ? "maw"
+      : raw.includes("leviathan")
+        ? "leviathan"
+        : "";
   if (!kind) return;
-  const baseReward = kind === "kraken" ? 25 : 12;
+  const baseReward = kind === "kraken" ? 25 : kind === "maw" ? 18 : 12;
   const reward = Math.max(1, Math.round(baseReward * (state.progressionEffects?.waveRewardMultiplier || 1)));
-  state.meta.bossClears = state.meta.bossClears || { leviathan: 0, kraken: 0 };
+  state.meta.bossClears = state.meta.bossClears || { leviathan: 0, kraken: 0, maw: 0 };
   state.meta.bossClears[kind] = (state.meta.bossClears[kind] || 0) + 1;
+  state.stats.bossClearsThisRun = (state.stats.bossClearsThisRun || 0) + 1;
   awardMarks(reward, {
     x: state.width * 0.5,
     y: state.height * 0.28,
     color: cssVar("--gold", "#ffe898"),
     size: 18,
   });
-  showCombo(`${kind === "kraken" ? "КРАКЕН" : "ЛЕВИАФАН"} ПРОЙДЕН · +${reward}`, true);
+  const label = kind === "kraken" ? "КРАКЕН" : kind === "maw" ? "ПАСТЬ" : "ЛЕВИАФАН";
+  showCombo(`${label} ПРОЙДЕН · +${reward}`, true);
   goalChime();
   saveMeta();
+}
+
+function isBossWaveId(id) {
+  const text = String(id || "");
+  return text.includes("leviathan") || text.includes("kraken") || text.includes("maw") || text.includes("trench");
 }
 
 function syncWave(announce = true) {
@@ -2648,8 +2720,8 @@ function syncWave(announce = true) {
   state.waveId = wave.id;
   state.waveIndex = Number.isFinite(wave.index) ? wave.index : WAVES.indexOf(wave);
   if (wave.boss) {
-    if (String(prevId).includes("leviathan") || String(prevId).includes("kraken")) grantBossClear(prevId);
-    // Boss arena: clear the field once, then only Leviathan.
+    if (isBossWaveId(prevId)) grantBossClear(prevId);
+    // Boss arena: clear the field once, then only the arena boss.
     state.hunters = state.hunters.filter((h) => h.shadow);
     spawnBoss();
   } else {
@@ -2675,7 +2747,7 @@ function syncWave(announce = true) {
       }
     }
     // If we just left the boss and the field is empty, seed one new hunter.
-    if ((String(prevId).includes("leviathan") || String(prevId).includes("kraken")) && !state.hunters.some((h) => !h.shadow)) {
+    if (isBossWaveId(prevId) && !state.hunters.some((h) => !h.shadow)) {
       grantBossClear(prevId);
       spawnHunter(true);
     }
@@ -3137,6 +3209,7 @@ function loadMeta() {
     bossClears: {
       leviathan: Math.max(0, Number(raw?.bossClears?.leviathan || 0)),
       kraken: Math.max(0, Number(raw?.bossClears?.kraken || 0)),
+      maw: Math.max(0, Number(raw?.bossClears?.maw || 0)),
     },
   };
 }
@@ -3237,18 +3310,19 @@ function playerIsSafe() {
 
 function heroCanDash() {
   const id = activeHeroId();
-  return id === "octopus" || id === "custom" || id === "manta" || id === "dolphin";
+  return id === "octopus" || id === "custom" || id === "manta" || id === "dolphin" || id === "seal";
 }
 
 function heroHasAura() {
   const id = activeHeroId();
-  return id === "jellyfish" || id === "angler";
+  return id === "jellyfish" || id === "angler" || id === "lantern";
 }
 
 function heroHungerMul() {
   const id = activeHeroId();
   if (id === "turtle") return 0.78;
   if (id === "starfish") return 0.72;
+  if (id === "seal") return 0.92;
   return 1;
 }
 
@@ -3259,14 +3333,19 @@ function heroHasShield() {
 
 function heroAuraSlowMul(hunter) {
   if (!heroHasAura() || !state.life || !hunter) return 1;
-  const angler = activeHeroId() === "angler";
+  const id = activeHeroId();
+  const angler = id === "angler";
+  const lantern = id === "lantern";
   const pulse = 0.5 + 0.5 * Math.sin(state.time * 3.2);
-  const reach = (angler ? 168 : 118) + Math.sin(state.time * 2.4) * 6;
+  const reach = (angler ? 168 : lantern ? 140 : 118) + Math.sin(state.time * 2.4) * 6;
   const d = dist(hunter.x, hunter.y, state.life.x, state.life.y);
   if (d > reach) return 1;
   if (angler) {
     const deep = 0.22 + (1 - pulse) * 0.08;
     return deep + 0.2 * clamp(d / reach, 0, 1);
+  }
+  if (lantern) {
+    return 0.62 + 0.22 * clamp(d / reach, 0, 1);
   }
   return 0.52 + 0.28 * clamp(d / reach, 0, 1);
 }
@@ -3280,15 +3359,16 @@ function tryHeroDash(dx, dy, moved) {
   const ny = dy / len;
   const manta = activeHeroId() === "manta";
   const dolphin = activeHeroId() === "dolphin";
+  const seal = activeHeroId() === "seal";
   const fromX = state.life.x;
   const fromY = state.life.y;
-  const boost = manta ? 108 : dolphin ? 74 : 56;
+  const boost = manta ? 108 : dolphin ? 74 : seal ? 68 : 56;
   state.life.x += nx * boost;
   state.life.y += ny * boost;
   clampLife();
   state.life.aim = Math.atan2(ny, nx);
-  state.heroDashCd = manta ? 1.35 : dolphin ? 1.55 : 2.6;
-  state.safeUntil = performance.now() + (manta ? 720 : dolphin ? 440 : 320);
+  state.heroDashCd = manta ? 1.35 : dolphin ? 1.55 : seal ? 1.7 : 2.6;
+  state.safeUntil = performance.now() + (manta ? 720 : dolphin ? 440 : seal ? 560 : 320);
   if (manta) {
     state.timeScale = 0.5;
     state.slowmoUntil = performance.now() + 320;
@@ -4265,11 +4345,13 @@ function renderWeekly() {
   if (!weeklyCardEl || !state.meta) return;
   const quest = currentWeeklyDef();
   const progress = Math.min(quest.target, state.meta.weekProgress || 0);
+  const cos = packApi()?.seasonCosmetic(state.meta.weekId || weekKey());
+  const seasonBit = cos?.name ? ` · ${cos.name}` : "";
   if (state.meta.weekRewardTaken) {
-    weeklyCardEl.textContent = `неделя · ${quest.title} · награда взята`;
+    weeklyCardEl.textContent = `неделя${seasonBit} · ${quest.title} · награда взята`;
     return;
   }
-  weeklyCardEl.textContent = `неделя · ${quest.title} · ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
+  weeklyCardEl.textContent = `неделя${seasonBit} · ${quest.title} · ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
 }
 
 function progressionState() {
@@ -4568,7 +4650,6 @@ function grantStarterGift() {
 
 function maybeShowOnboardTips() {
   if (!state.meta || state.meta.onboarded) return false;
-  if ((state.meta.runs || 0) <= 0) return false;
   showOnboard();
   return true;
 }
@@ -5484,6 +5565,12 @@ function bindHoldButton(button, target) {
   button.addEventListener("click", (e) => e.preventDefault());
 }
 
+function canOfferRewardedContinue() {
+  if (state.rewardedContinueUsed) return false;
+  const native = window.OttiskNative;
+  return !!(native?.isNative && native.adsAvailable && typeof native.showRewardedAd === "function");
+}
+
 function continueOffer() {
   const used = state.continuesUsed || 0;
   if (used >= MAX_CONTINUES_PER_RUN) {
@@ -5491,6 +5578,9 @@ function continueOffer() {
   }
   if (used < FREE_CONTINUES_PER_RUN) {
     return { ok: true, kind: "free", label: "Продолжить", sub: "бесплатно · 1 раз", cost: 0 };
+  }
+  if (canOfferRewardedContinue()) {
+    return { ok: true, kind: "rewarded", label: "Продолжить", sub: "за рекламу · 1 раз", cost: 0 };
   }
   const marks = state.meta?.marks || 0;
   if (marks >= MARKS_CONTINUE_COST) {
@@ -5519,11 +5609,14 @@ function refreshContinueUi() {
   const offer = continueOffer();
   const shopBtn = document.getElementById("btn-continue-shop");
   const iapBtn = document.getElementById("btn-continue-iap");
+  const rewardedBtn = document.getElementById("btn-continue-rewarded");
   if (continueLabelEl) continueLabelEl.textContent = offer.label;
   if (continueSubEl) continueSubEl.textContent = offer.sub;
   if (continueHintEl) {
     if (offer.kind === "free") {
       continueHintEl.textContent = "Один бесплатный шанс за забег. Счёт сохранится.";
+    } else if (offer.kind === "rewarded") {
+      continueHintEl.textContent = "Короткое видео — и ещё один шанс. Счёт сохранится.";
     } else if (offer.kind === "marks") {
       continueHintEl.textContent = `Можно за ${MARKS_CONTINUE_COST} следов или докупить за ${CONTINUE_PRICE_LABEL}.`;
     } else if (offer.kind === "iap") {
@@ -5534,7 +5627,12 @@ function refreshContinueUi() {
   }
   if (btnContinue) {
     btnContinue.disabled = !offer.ok;
-    btnContinue.classList.toggle("hidden", offer.kind === "none");
+    btnContinue.classList.toggle("hidden", offer.kind === "none" || offer.kind === "rewarded");
+  }
+  if (rewardedBtn) {
+    const showRewarded = offer.kind === "rewarded" || (canOfferRewardedContinue() && offer.kind !== "free" && offer.kind !== "none");
+    rewardedBtn.classList.toggle("hidden", !showRewarded);
+    rewardedBtn.disabled = !showRewarded;
   }
   if (iapBtn) {
     const showIap = offer.kind === "marks" || offer.kind === "iap";
@@ -5647,6 +5745,9 @@ function evaluateTrophies(runCtx = {}) {
     const first = unlocked[0];
     showToast(`трофей · ${first.title}`);
     goalChime();
+    for (const trophy of unlocked) {
+      window.OttiskNative?.unlockAchievement?.(trophy.id).catch?.(() => {});
+    }
   }
   return unlocked;
 }
@@ -6021,6 +6122,7 @@ function analyticsDeathKind(reason) {
   const text = String(reason || "").toLowerCase();
   if (text.includes("голод") || text.includes("свет погас")) return "hunger";
   if (text.includes("кракен")) return "kraken";
+  if (text.includes("пасть") || text.includes("бездн")) return "maw";
   if (text.includes("левиафан")) return "leviathan";
   if (text.includes("отпуст") || text.includes("касани")) return "release";
   if (text.includes("хищ") || text.includes("рыб") || text.includes("тень")) return "hunter";
@@ -6057,6 +6159,7 @@ function finalizeGameOver(reason) {
   }
   evaluateDaily();
   evaluateWeekly(state.score);
+  recordLocalDayScore(state.score);
   finalScoreEl.textContent = String(state.score);
   deathReasonEl.textContent = reason;
   const wave = waveForScore(state.score);
@@ -6275,6 +6378,10 @@ async function requestContinue() {
     await purchaseContinueIap();
     return;
   }
+  if (offer.kind === "rewarded") {
+    await requestRewardedContinue();
+    return;
+  }
   state.continueBusy = true;
   if (offer.kind === "marks") {
     if (!state.meta || (state.meta.marks || 0) < offer.cost) {
@@ -6290,6 +6397,26 @@ async function requestContinue() {
     showToast(`−${offer.cost} следов`);
   }
   grantContinue();
+}
+
+async function requestRewardedContinue() {
+  if (!state.pendingDeathReason || state.continueBusy) return;
+  if (!canOfferRewardedContinue()) {
+    showToast("реклама недоступна");
+    refreshContinueUi();
+    return;
+  }
+  unlockAudio();
+  state.continueBusy = true;
+  const result = await window.OttiskNative.showRewardedAd().catch(() => null);
+  if (result?.ok) {
+    state.rewardedContinueUsed = true;
+    grantContinue();
+    return;
+  }
+  state.continueBusy = false;
+  showToast(result?.message || "реклама отменена");
+  refreshContinueUi();
 }
 
 async function purchaseContinueIap() {
@@ -6707,6 +6834,7 @@ function resetStats() {
   state.stats.nearMisses = 0;
   state.stats.shadowsSpawned = 0;
   state.stats.glyphsTaken = 0;
+  state.stats.bossClearsThisRun = 0;
 }
 
 function resetRun() {
@@ -6756,6 +6884,7 @@ function resetRun() {
   state.pendingDeathReason = "";
   state.runUnlockedSkins = [];
   state.continuesUsed = 0;
+  state.rewardedContinueUsed = false;
   state.safeUntil = 0;
   state.continueBusy = false;
   state.paused = false;
@@ -7111,8 +7240,10 @@ function spawnTrailParticles(x0, y0, x1, y1, moved) {
 }
 
 function updateAnglerLure(dt) {
-  if (activeHeroId() !== "angler" || !state.life) return;
-  const reach = 210;
+  const id = activeHeroId();
+  if ((id !== "angler" && id !== "lantern") || !state.life) return;
+  const reach = id === "lantern" ? 175 : 210;
+  const pullScale = id === "lantern" ? 0.78 : 1;
   let closest = null;
   let closestD = Infinity;
   for (const spark of state.sparks) {
@@ -7122,10 +7253,10 @@ function updateAnglerLure(dt) {
       closestD = d;
       closest = spark;
     }
-    const pull = (1 - d / reach) * 78 * dt;
+    const pull = (1 - d / reach) * 78 * dt * pullScale;
     spark.vx += ((state.life.x - spark.x) / d) * pull * 0.28;
     spark.vy += ((state.life.y - spark.y) / d) * pull * 0.28;
-    if (Math.random() < dt * 0.08 && spark.type !== "rare" && spark.type !== "super" && spark.type !== "deep") {
+    if (id === "angler" && Math.random() < dt * 0.08 && spark.type !== "rare" && spark.type !== "super" && spark.type !== "deep") {
       spark.type = "rare";
       spark.pulse = Math.random() * Math.PI * 2;
       floatText(spark.x, spark.y - 12, "золото", cssVar("--gold", "#ffe898"), 12);
@@ -7138,7 +7269,7 @@ function updateAnglerLure(dt) {
       vx: (state.life.x - closest.x) * 0.05,
       vy: (state.life.y - closest.y) * 0.05,
       size: rand(1.5, 3),
-      color: "rgba(255,220,140,0.85)",
+      color: id === "lantern" ? "rgba(255,240,180,0.9)" : "rgba(255,220,140,0.85)",
       kind: "streak",
       decay: 0.09,
     });
@@ -7417,6 +7548,37 @@ function updateBossHunter(hunter, dt, diff) {
   hunter.bossTimer = (hunter.bossTimer || 0) - dt;
   hunter.orbit = (hunter.orbit || 0) + dt * (hunter.orbitSpeed || 0.85);
   const orbitR = hunter.orbitR || 150;
+  if (hunter.bossPhase === "suck") {
+    const d = dist(hunter.x, hunter.y, state.life.x, state.life.y) || 1;
+    const pull = clamp(1 - d / 240, 0.15, 1) * 38 * dt;
+    state.life.x += ((hunter.x - state.life.x) / d) * pull;
+    state.life.y += ((hunter.y - state.life.y) / d) * pull;
+    clampLife();
+    if (Math.random() < dt * 10) {
+      pushParticle({
+        x: state.life.x + rand(-18, 18),
+        y: state.life.y + rand(-18, 18),
+        vx: (hunter.x - state.life.x) * 0.04,
+        vy: (hunter.y - state.life.y) * 0.04,
+        size: rand(2, 5),
+        color: "#4a78a8",
+        decay: 0.04,
+      });
+    }
+    if (hunter.bossTimer <= 0) {
+      hunter.bossPhase = "telegraph";
+      hunter.bossTimer = 0.7;
+      hunter.chargeTx = state.life.x;
+      hunter.chargeTy = state.life.y;
+      hunter.chainCharges = 0;
+      hunter.warn = 1;
+    }
+    return {
+      tx: state.life.x + Math.cos(hunter.orbit * 1.2) * (orbitR * 0.55),
+      ty: state.life.y + Math.sin(hunter.orbit) * (orbitR * 0.45),
+      speedMul: 0.55,
+    };
+  }
   if (hunter.bossPhase === "ink_burst") {
     const d = dist(hunter.x, hunter.y, state.life.x, state.life.y);
     if (d < 170) {
@@ -7450,14 +7612,18 @@ function updateBossHunter(hunter, dt, diff) {
     if (hunter.bossTimer <= 0) {
       hunter.attackCount = (hunter.attackCount || 0) + 1;
       const inkAttack = hunter.kraken && hunter.attackCount % 3 === 0;
-      hunter.bossPhase = inkAttack ? "ink_burst" : "telegraph";
-      hunter.bossTimer = inkAttack ? 1.35 : (hunter.kraken ? 0.65 : 0.85);
+      const suckAttack = hunter.maw && hunter.attackCount % 2 === 0;
+      hunter.bossPhase = suckAttack ? "suck" : inkAttack ? "ink_burst" : "telegraph";
+      hunter.bossTimer = suckAttack ? 1.55 : inkAttack ? 1.35 : (hunter.kraken ? 0.65 : hunter.maw ? 0.75 : 0.85);
       hunter.chargeTx = state.life.x;
       hunter.chargeTy = state.life.y;
       hunter.chainCharges = 0;
       hunter.warn = 1;
       playPredatorSfx("boss", "warn");
-      if (inkAttack) {
+      if (suckAttack) {
+        showCoach("ПАСТЬ · ТЯГА", 1200, true);
+        burst(hunter.x, hunter.y, "#4a78a8", 20, 4.4);
+      } else if (inkAttack) {
         showCoach("КРАКЕН · ЧЕРНИЛЬНОЕ КОЛЬЦО", 1200, true);
         burst(hunter.x, hunter.y, "#9a68d8", 24, 5);
       }
@@ -7531,7 +7697,7 @@ function updateHunters(dt) {
   if (state.runMode === "calm") interval *= 1.65;
   if (opening) interval = Math.max(interval, 2.8);
   if (!state.slowHunterSeen) interval = Math.max(interval, 1.1);
-  const firstHunterAt = 0.45;
+  const firstHunterAt = 1.05;
   if (wave.boss) {
     const hasBoss = state.hunters.some((h) => h.boss || h.species === "boss");
     if (!hasBoss && state.elapsed > firstHunterAt) {
@@ -7655,6 +7821,7 @@ function updateHunters(dt) {
     if (activeEventId() === "tangled-path") speed *= 1.16;
     if (activeEventId() === "mirror-tide") speed *= 1.1;
     if (activeEventId() === "ember-rain") speed *= 0.95;
+    if (activeEventId() === "tidepull") speed *= 0.88;
     if (inInkDive()) speed *= 0.35;
     if (species === "dart" && hunter.dashT > 0) speed *= 2.05 * diff.dash;
     if (species === "shark" && hunter.dashT > 0) speed *= 1.75 * diff.dash;
@@ -7915,7 +8082,7 @@ function updateRun(dt) {
         floatText(state.life.x, state.life.y - 28, "откат готов", cssVar("--gold", "#ffe898"), 14);
       }
     }
-    state.hunger -= HUNGER_DRAIN_PER_SEC * dt * (hasMut("cool") ? 0.7 : 1) * renewalMul * stillPenalty * calmMul * modeHungerMul * diveMul * (inOpening() ? 0.72 : 1) * playerDifficulty().hunger * heroHungerMul() * (state.tuning?.hungerDrain || 1);
+    state.hunger -= HUNGER_DRAIN_PER_SEC * dt * (hasMut("cool") ? 0.7 : 1) * renewalMul * stillPenalty * calmMul * modeHungerMul * diveMul * (inOpening() ? 0.62 : 1) * playerDifficulty().hunger * heroHungerMul() * (state.tuning?.hungerDrain || 1);
     state.hunger = Math.max(0, state.hunger);
   }
   updateHungerUi();
@@ -8309,7 +8476,8 @@ function drawBossHunter(hunter, alpha = 1) {
 function drawHeroAura() {
   if (!state.life || !state.running) return;
   if (heroHasAura()) {
-    const reach = (activeHeroId() === "angler" ? 168 : 118) + Math.sin(state.time * 2.4) * 6;
+    const heroId = activeHeroId();
+    const reach = (heroId === "angler" ? 168 : heroId === "lantern" ? 140 : 118) + Math.sin(state.time * 2.4) * 6;
     ctx.save();
     ctx.globalAlpha = 0.16 + Math.sin(state.time * 3) * 0.04;
     ctx.strokeStyle = cssVar("--accent-b", "#7affd4");
@@ -8510,6 +8678,16 @@ function drawDolphin(body, alpha = 1) {
   if (artDraw("drawDolphin", body, alpha)) return;
 }
 
+function drawSeal(body, alpha = 1) {
+  if (artDraw("drawSeal", body, alpha)) return;
+  drawDolphin(body, alpha);
+}
+
+function drawLantern(body, alpha = 1) {
+  if (artDraw("drawLantern", body, alpha)) return;
+  drawAngler(body, alpha);
+}
+
 function drawStarfish(body, alpha = 1) {
   if (artDraw("drawStarfish", body, alpha)) return;
 }
@@ -8621,6 +8799,7 @@ function drawLifeBody(body, alpha = 1, heroOverride = null) {
   else if (hero === "crab") drawCrab(body, alpha);
   else if (hero === "manta") drawManta(body, alpha);
   else if (hero === "angler") drawAngler(body, alpha);
+  else if (hero === "lantern") drawLantern(body, alpha);
   else if (hero === "nautilus") drawNautilus(body, alpha);
   else if (hero === "sub") drawSubmarine(body, alpha);
   else if (hero === "eel") drawEel(body, alpha);
@@ -8628,6 +8807,7 @@ function drawLifeBody(body, alpha = 1, heroOverride = null) {
   else if (hero === "seahorse") drawSeahorse(body, alpha);
   else if (hero === "whale") drawWhale(body, alpha);
   else if (hero === "dolphin") drawDolphin(body, alpha);
+  else if (hero === "seal") drawSeal(body, alpha);
   else if (hero === "starfish") drawStarfish(body, alpha);
   else if (hero === "custom") drawCustomHero(body, alpha);
   else drawInkPolyp(body, alpha);
@@ -9146,6 +9326,52 @@ function cloudConfig() {
   } catch (_) {
     return {};
   }
+}
+
+function loadLocalBoard() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOCAL_BOARD_KEY) || "[]");
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((row) => row && Number.isFinite(Number(row.score)) && Number(row.score) > 0)
+      .map((row) => ({
+        score: Math.floor(Number(row.score)),
+        name: String(row.name || "оттиск").slice(0, 24),
+        day: typeof row.day === "string" ? row.day : "",
+        at: Number(row.at) || 0,
+      }));
+  } catch (_) {
+    return [];
+  }
+}
+
+function recordLocalDayScore(score) {
+  const value = Math.floor(Number(score) || 0);
+  if (value < 1) return;
+  const name = String(state.meta?.cloudName || window.OttiskAccount?.displayName?.() || "оттиск").slice(0, 24);
+  const entries = loadLocalBoard();
+  entries.push({ score: value, name, day: localDayKey(), at: Date.now() });
+  entries.sort((a, b) => b.score - a.score || a.at - b.at);
+  localStorage.setItem(LOCAL_BOARD_KEY, JSON.stringify(entries.slice(0, LOCAL_BOARD_MAX)));
+  renderLocalLeaderboard();
+}
+
+function renderLocalLeaderboard() {
+  const list = document.getElementById("local-leaderboard");
+  if (!list) return;
+  list.textContent = "";
+  const entries = loadLocalBoard();
+  if (!entries.length) {
+    const empty = document.createElement("li");
+    empty.textContent = "пока пусто · сыграй забег";
+    list.appendChild(empty);
+    return;
+  }
+  entries.forEach((entry, index) => {
+    const item = document.createElement("li");
+    item.textContent = `#${index + 1} · ${entry.name} · ${entry.score}`;
+    list.appendChild(item);
+  });
 }
 
 function renderCloudStatus(text = "") {
@@ -9841,6 +10067,10 @@ function boot() {
     e.preventDefault();
     purchaseContinueIap().catch(() => showToast("покупка недоступна"));
   });
+  document.getElementById("btn-continue-rewarded")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    requestRewardedContinue().catch(() => showToast("реклама недоступна"));
+  });
   document.getElementById("btn-continue-shop")?.addEventListener("click", () => openShop("continue"));
   window.addEventListener("resize", resize);
   const pauseForBackground = () => {
@@ -9908,7 +10138,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=87")
+      .register("./sw.js?v=88")
       .then((reg) => reg.update())
       .catch(() => {});
   }

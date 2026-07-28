@@ -13,4 +13,8 @@ Crash reports, daily leaderboard and cross-device sync need a Cloudflare Worker.
 Migration `0003_email_accounts.sql` adds email/password columns.
 Apply migrations before relying on `/v1/register/email` and `/v1/login`.
 
-Without a Worker URL the game stays fully offline: local saves, local accounts (if enabled on a branch), local analytics.
+Without a Worker URL the game stays fully offline: local saves, local accounts, local analytics, and an on-device leaderboard (`#local-leaderboard`) filled from finished runs.
+
+## Local board
+- Top scores on the current device are written after each run.
+- Cloud daily board still needs a Worker URL + account; the local list works without it.
