@@ -1242,7 +1242,15 @@ function screenVisible(el) {
 }
 
 function inMainMenu() {
-  return !state.running && (screenVisible(screenStartEl) || screenVisible(screenHeroEl) || screenVisible(screenDiffEl));
+  const screenMoreEl = document.getElementById("screen-more");
+  const screenAuthEl = document.getElementById("screen-auth");
+  return !state.running && (
+    screenVisible(screenStartEl)
+    || screenVisible(screenHeroEl)
+    || screenVisible(screenDiffEl)
+    || screenVisible(screenMoreEl)
+    || screenVisible(screenAuthEl)
+  );
 }
 
 function hideFlowScreens() {
@@ -1251,6 +1259,8 @@ function hideFlowScreens() {
   screenDiffEl?.classList.add("hidden");
   screenOnboardEl?.classList.add("hidden");
   document.getElementById("screen-donate")?.classList.add("hidden");
+  document.getElementById("screen-more")?.classList.add("hidden");
+  document.getElementById("screen-auth")?.classList.add("hidden");
   screenDrawEl?.classList.add("hidden");
 }
 
@@ -1267,8 +1277,140 @@ function showHomeMenu() {
   updateStartButtonCopy();
   updateModeToggles();
   renderTrophyList();
+  renderAccountUi();
   syncMenuMusic();
   maybeShowOnboardTips();
+}
+
+function showMoreMenu() {
+  hideFlowScreens();
+  document.getElementById("screen-more")?.classList.remove("hidden");
+  updateModeToggles();
+  renderControlPicker();
+  renderTrophyList();
+  renderGifts();
+  renderProgression();
+  renderStory();
+  renderAccountUi();
+  renderCloudStatus();
+  syncMenuMusic();
+}
+
+let authMode = "register";
+
+function trAuth(key, fallback) {
+  return window.OttiskI18n?.t?.(key) || fallback;
+}
+
+function setAuthMode(mode) {
+  authMode = mode === "login" ? "login" : "register";
+  const reg = document.getElementById("auth-tab-register");
+  const login = document.getElementById("auth-tab-login");
+  const nameWrap = document.getElementById("auth-name-wrap");
+  const label = document.getElementById("auth-submit-label");
+  const sub = document.querySelector("#auth-submit .btn-sub");
+  const password = document.getElementById("auth-password");
+  reg?.classList.toggle("on", authMode === "register");
+  login?.classList.toggle("on", authMode === "login");
+  reg?.setAttribute("aria-selected", authMode === "register" ? "true" : "false");
+  login?.setAttribute("aria-selected", authMode === "login" ? "true" : "false");
+  if (nameWrap) nameWrap.classList.toggle("hidden", authMode === "login");
+  if (label) {
+    label.textContent = authMode === "login"
+      ? trAuth("auth_enter", "Войти")
+      : trAuth("auth_create", "Создать аккаунт");
+  }
+  if (sub) {
+    sub.textContent = authMode === "login"
+      ? trAuth("auth_enter_sub", "загрузить прогресс")
+      : trAuth("auth_create_sub", "прогресс и покупки");
+  }
+  if (password) {
+    password.autocomplete = authMode === "login" ? "current-password" : "new-password";
+  }
+  const err = document.getElementById("auth-error");
+  err?.classList.add("hidden");
+}
+
+function showAuthScreen(preferredMode = "register") {
+  hideFlowScreens();
+  setAuthMode(preferredMode);
+  document.getElementById("screen-auth")?.classList.remove("hidden");
+  syncMenuMusic();
+}
+
+function authErrorMessage(code) {
+  const map = {
+    invalid_email: trAuth("auth_err_email", "Введите корректный email"),
+    invalid_password: trAuth("auth_err_password", "Пароль от 6 символов"),
+    email_taken: trAuth("auth_err_taken", "Этот email уже зарегистрирован"),
+    not_found: trAuth("auth_err_not_found", "Аккаунт не найден"),
+    bad_credentials: trAuth("auth_err_bad", "Неверный email или пароль"),
+  };
+  return map[code] || trAuth("auth_err_generic", "Не удалось войти");
+}
+
+function renderAccountUi() {
+  const chip = document.getElementById("account-chip");
+  const status = document.getElementById("account-status");
+  const logoutBtn = document.getElementById("btn-account-logout");
+  const manageBtn = document.getElementById("btn-account-manage");
+  const session = window.OttiskAccount?.session?.();
+  if (chip) {
+    if (!session) chip.textContent = trAuth("account", "аккаунт");
+    else if (session.mode === "guest") chip.textContent = window.OttiskI18n?.locale === "en" ? "guest" : "гость";
+    else chip.textContent = (session.displayName || session.email || "аккаунт").slice(0, 14);
+  }
+  if (status) {
+    status.textContent = session?.mode === "user"
+      ? `${trAuth("auth_user_status", "аккаунт · прогресс и покупки сохранены")}${session.email ? ` · ${session.email}` : ""}`
+      : trAuth("auth_guest_status", "гость · прогресс только на устройстве");
+  }
+  logoutBtn?.classList.toggle("hidden", session?.mode !== "user");
+  if (manageBtn) {
+    manageBtn.textContent = session?.mode === "user"
+      ? trAuth("auth_login", "Вход")
+      : trAuth("auth_register", "Регистрация");
+  }
+}
+
+async function submitAuthForm(event) {
+  event?.preventDefault?.();
+  const email = document.getElementById("auth-email")?.value || "";
+  const password = document.getElementById("auth-password")?.value || "";
+  const displayName = document.getElementById("auth-name")?.value || "";
+  const err = document.getElementById("auth-error");
+  const submit = document.getElementById("auth-submit");
+  if (submit) submit.disabled = true;
+  try {
+    if (authMode === "login") {
+      await window.OttiskAccount.login({ email, password });
+      location.reload();
+      return;
+    }
+    await window.OttiskAccount.register({ email, password, displayName });
+    if (displayName && state.meta) {
+      state.meta.cloudName = displayName.slice(0, 24);
+      saveMeta();
+    }
+    showToast(trAuth("auth_create", "аккаунт создан"));
+    showHomeMenu();
+    renderAccountUi();
+  } catch (error) {
+    if (err) {
+      err.textContent = authErrorMessage(error?.code || error?.message);
+      err.classList.remove("hidden");
+    }
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+function finishGuestEntry() {
+  window.OttiskAccount?.continueAsGuest?.();
+  showHomeMenu();
+  renderAccountUi();
+  showToast(trAuth("auth_guest_status", "гость · прогресс только на устройстве"));
 }
 
 function showHeroPick() {
@@ -3003,6 +3145,9 @@ function saveMeta() {
   if (!state.meta) return;
   localStorage.setItem(META_KEY, JSON.stringify(state.meta));
   localStorage.setItem(BEST_KEY, String(state.meta.best));
+  try {
+    window.OttiskAccount?.persistMeta?.(state.meta);
+  } catch (_) {}
   if (window.OttiskCloud?.isLinked?.()) {
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(() => {
@@ -4296,6 +4441,14 @@ function renderSettings() {
     btnHaptics.classList.toggle("on", state.meta.haptics !== false);
     btnHaptics.setAttribute("aria-pressed", state.meta.haptics !== false ? "true" : "false");
     btnHaptics.textContent = state.meta.haptics !== false ? "вибро" : "вибро off";
+  }
+  const hapticsMore = document.getElementById("btn-haptics-more");
+  if (hapticsMore) {
+    hapticsMore.classList.toggle("on", state.meta.haptics !== false);
+    hapticsMore.setAttribute("aria-pressed", state.meta.haptics !== false ? "true" : "false");
+    hapticsMore.textContent = state.meta.haptics !== false
+      ? tr("haptics", "вибрация")
+      : (window.OttiskI18n?.locale === "en" ? "haptics off" : "вибрация off");
   }
   const motion = document.getElementById("btn-reduce-motion");
   const contrast = document.getElementById("btn-high-contrast");
@@ -8956,7 +9109,11 @@ function frame(ts) {
   }
   const inMenuFlow =
     screenOnboardEl?.classList.contains("hidden") !== false &&
-    (screenVisible(screenStartEl) || screenVisible(screenHeroEl) || screenVisible(screenDiffEl));
+    (screenVisible(screenStartEl)
+      || screenVisible(screenHeroEl)
+      || screenVisible(screenDiffEl)
+      || screenVisible(document.getElementById("screen-more"))
+      || screenVisible(document.getElementById("screen-auth")));
   if (state.running) {
     updateRun(dt);
   } else if (inMenuFlow) {
@@ -9247,6 +9404,8 @@ function boot() {
     updateDonateThanks();
     renderProgression();
     renderStory();
+    renderAccountUi();
+    setAuthMode(authMode);
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));
@@ -9367,6 +9526,46 @@ function boot() {
     renderSettings();
     if (state.meta.haptics) buzz(8);
     showToast(state.meta.haptics ? "вибро вкл" : "вибро выкл");
+  });
+  document.getElementById("btn-haptics-more")?.addEventListener("click", () => {
+    btnHaptics?.click();
+  });
+  document.getElementById("btn-more")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    showMoreMenu();
+  });
+  document.getElementById("btn-more-back")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    showHomeMenu();
+  });
+  document.getElementById("btn-account")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    const session = window.OttiskAccount?.session?.();
+    if (session?.mode === "user") showMoreMenu();
+    else showAuthScreen("register");
+  });
+  document.getElementById("btn-account-manage")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    showAuthScreen(window.OttiskAccount?.isUser?.() ? "login" : "register");
+  });
+  document.getElementById("btn-account-logout")?.addEventListener("click", () => {
+    if (!window.OttiskAccount?.isUser?.()) return;
+    if (!window.confirm(trAuth("auth_logout", "Выйти") + "?")) return;
+    window.OttiskAccount.logout();
+    showAuthScreen("login");
+    renderAccountUi();
+  });
+  document.getElementById("auth-tab-register")?.addEventListener("click", () => setAuthMode("register"));
+  document.getElementById("auth-tab-login")?.addEventListener("click", () => setAuthMode("login"));
+  document.getElementById("auth-form")?.addEventListener("submit", (event) => {
+    submitAuthForm(event);
+  });
+  document.getElementById("auth-guest")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    finishGuestEntry();
+  });
+  document.getElementById("auth-lang")?.addEventListener("click", () => {
+    document.getElementById("btn-lang")?.click();
   });
   document.getElementById("btn-reduce-motion")?.addEventListener("click", () => {
     if (!state.meta) return;
@@ -9682,6 +9881,7 @@ function boot() {
     else pauseForBackground();
   });
   updateStartButtonCopy();
+  renderAccountUi();
   window.OttiskPlayOps?.wireUpdateBanner?.();
   window.OttiskPlayOps?.checkSoftUpdate?.();
   window.OttiskPlayOps?.syncReminderToggle?.();
@@ -9696,8 +9896,13 @@ function boot() {
     window.OttiskPlayOps?.ensureReminderScheduled?.();
   });
   // First death returns to tips + starter gift; the live tutorial teaches the hook.
-  if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
-    setTimeout(() => showToast(`серия · ${state.meta.streak} дн`), 650);
+  if (window.OttiskAccount?.isReady?.()) {
+    showHomeMenu();
+    if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
+      setTimeout(() => showToast(`серия · ${state.meta.streak} дн`), 650);
+    }
+  } else {
+    showAuthScreen("register");
   }
   requestAnimationFrame(frame);
   const nativeShell = !!window.OttiskNative?.isNative;

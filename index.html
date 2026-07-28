@@ -55,7 +55,47 @@
       </div>
     </footer>
 
-    <div id="screen-start" class="screen screen-menu">
+    <div id="screen-auth" class="screen screen-auth hidden" aria-labelledby="auth-title">
+      <div class="menu-veil" aria-hidden="true">
+        <div class="menu-veil-light"></div>
+        <div class="menu-veil-depth"></div>
+      </div>
+      <div class="auth-shell">
+        <p class="brand menu-brand auth-brand">ОТТИСК</p>
+        <h1 id="auth-title" class="auth-title" data-i18n="auth_title">Сохрани свой след</h1>
+        <p class="auth-lead" data-i18n="auth_lead">Аккаунт хранит прогресс, героев и покупки на этом устройстве.</p>
+
+        <div class="auth-tabs" role="tablist" aria-label="Вход">
+          <button id="auth-tab-register" class="auth-tab on" type="button" role="tab" aria-selected="true" data-i18n="auth_register">Регистрация</button>
+          <button id="auth-tab-login" class="auth-tab" type="button" role="tab" aria-selected="false" data-i18n="auth_login">Вход</button>
+        </div>
+
+        <form id="auth-form" class="auth-form" autocomplete="on">
+          <label class="auth-field" id="auth-name-wrap">
+            <span data-i18n="auth_name">Имя</span>
+            <input id="auth-name" name="name" type="text" maxlength="24" autocomplete="nickname" placeholder="как тебя звать" />
+          </label>
+          <label class="auth-field">
+            <span data-i18n="auth_email">Email</span>
+            <input id="auth-email" name="email" type="email" required maxlength="120" autocomplete="email" inputmode="email" placeholder="you@mail.com" />
+          </label>
+          <label class="auth-field">
+            <span data-i18n="auth_password">Пароль</span>
+            <input id="auth-password" name="password" type="password" required minlength="6" maxlength="72" autocomplete="new-password" placeholder="минимум 6 символов" />
+          </label>
+          <p id="auth-error" class="auth-error hidden" role="alert"></p>
+          <button id="auth-submit" class="btn btn-primary btn-play" type="submit">
+            <span class="btn-main" id="auth-submit-label" data-i18n="auth_create">Создать аккаунт</span>
+            <span class="btn-sub" data-i18n="auth_create_sub">прогресс и покупки</span>
+          </button>
+        </form>
+
+        <button id="auth-guest" class="menu-link auth-guest" type="button" data-i18n="auth_guest">Продолжить без аккаунта</button>
+        <button id="auth-lang" class="menu-toggle auth-lang" type="button" aria-label="Switch to English">EN</button>
+      </div>
+    </div>
+
+    <div id="screen-start" class="screen screen-menu hidden">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
         <div class="menu-veil-depth"></div>
@@ -67,24 +107,17 @@
           <span class="menu-sep" aria-hidden="true">·</span>
           <span id="marks-start">0 следов</span>
         </p>
-        <div class="menu-toggles" role="group" aria-label="Настройки">
+        <div class="menu-toggles" role="group" aria-label="Быстрые настройки">
+          <button id="btn-account" class="menu-toggle menu-account" type="button" aria-label="Аккаунт">
+            <span id="account-chip" data-i18n="account">аккаунт</span>
+          </button>
           <button id="btn-sound" class="menu-toggle on" type="button" aria-pressed="true" aria-label="Звук">звук</button>
-          <button id="btn-haptics" class="menu-toggle on" type="button" aria-pressed="true" aria-label="Вибрация">вибро</button>
           <button id="btn-lang" class="menu-toggle" type="button" aria-label="Switch to English">EN</button>
         </div>
       </header>
 
-      <button id="btn-shop" class="btn-shop-top" type="button" aria-label="Открыть магазин">
-        <span class="btn-shop-top-copy">
-          <span class="btn-shop-top-main" data-i18n="shop">Магазин</span>
-          <span id="donate-thanks" class="btn-shop-top-sub" data-i18n="shop_sub">герои · следы · донат</span>
-        </span>
-        <span class="btn-shop-top-marks" id="shop-top-marks" aria-hidden="true">0</span>
-      </button>
-
-      <div class="menu-main">
+      <div class="menu-main menu-main-simple">
         <p class="brand menu-brand">ОТТИСК</p>
-        <h1 class="menu-title" data-i18n="hold_title">Удерживай палец</h1>
         <p class="menu-lead" data-i18n="hold_lead">Существо живёт только в касании</p>
 
         <div class="actions menu-play">
@@ -94,127 +127,172 @@
           </button>
         </div>
 
-        <div id="control-list" class="control-row" role="group" aria-label="Управление"></div>
-        <div class="mode-row" role="group" aria-label="Режимы">
-          <button id="btn-mode-daily" class="menu-toggle" type="button" aria-pressed="false" data-i18n="daily">день</button>
-          <button id="btn-mode-ghost" class="menu-toggle" type="button" aria-pressed="true" data-i18n="ghost_race">призрак</button>
-          <button id="btn-mode-coop" class="menu-toggle" type="button" aria-pressed="false" data-i18n="coop">дуэт</button>
-        </div>
-        <div class="run-mode-row" role="group" aria-label="Тип забега">
-          <button class="menu-toggle run-mode-btn" data-run-mode="endless" type="button" aria-pressed="false" data-i18n="endless">бесконечный</button>
-          <button class="menu-toggle run-mode-btn" data-run-mode="boss" type="button" aria-pressed="false" data-i18n="boss_rush">боссы</button>
-          <button class="menu-toggle run-mode-btn" data-run-mode="calm" type="button" aria-pressed="false" data-i18n="calm">спокойный</button>
-        </div>
-        <p id="mode-note" class="menu-note quiet">обычный забег</p>
-        <button id="btn-how-to-play" class="menu-link how-to-play" type="button">Как играть</button>
-        <details class="access-details">
-          <summary class="menu-section-label">Доступность и качество</summary>
-          <div class="access-row" role="group" aria-label="Доступность">
-            <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
-            <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
-            <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
-            <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
-            <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
-            <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
-            <button id="btn-daily-reminder" class="menu-toggle" type="button" aria-pressed="false">напоминание · выкл</button>
-          </div>
-        </details>
-      </div>
-
-      <div class="menu-more">
-        <p id="daily-quest" class="menu-note" aria-live="polite"></p>
-        <p id="weekly-card" class="menu-note weekly-card" aria-live="polite"></p>
-        <section id="menu-trophies" class="menu-trophies" aria-label="Трофеи">
-          <p class="menu-section-label" data-i18n="trophies">Трофеи</p>
-          <div id="trophy-list" class="trophy-list" role="list"></div>
-        </section>
-
-        <section id="menu-gifts" class="menu-gifts hidden" aria-label="Подарки">
-          <div id="gift-list" class="gift-rail" role="list"></div>
-        </section>
-        <p id="gift-next" class="menu-note quiet hidden" aria-live="polite"></p>
-        <p id="shop-progress" class="menu-note shop-progress" aria-live="polite"></p>
-
-        <section class="data-tools progression-tools" aria-label="Развитие">
-          <p class="menu-section-label" data-i18n="progression">Развитие</p>
-          <p id="progression-points" class="menu-note quiet">очки глубины · 0</p>
-          <div id="skill-tree" class="skill-tree"></div>
-        </section>
-
-        <section class="data-tools story-tools" aria-label="История">
-          <p class="menu-section-label" data-i18n="story">История глубины</p>
-          <p id="story-chapter" class="menu-note"></p>
-          <p id="story-biome" class="menu-note quiet"></p>
-        </section>
-
-        <section class="data-tools" aria-label="Перенос прогресса">
-          <p class="menu-section-label" data-i18n="progress">Прогресс</p>
-          <p class="menu-note quiet" data-i18n="progress_help">Сохрани файл или перенеси код на другое устройство.</p>
-          <div class="data-tools-row">
-            <button id="btn-backup-export" class="menu-link" type="button" data-i18n="save">Сохранить</button>
-            <button id="btn-backup-code" class="menu-link" type="button" data-i18n="transfer_code">Код переноса</button>
-            <button id="btn-backup-import" class="menu-link" type="button" data-i18n="load">Загрузить</button>
-          </div>
-          <input id="backup-file" class="hidden" type="file" accept="application/json,.json" />
-        </section>
-
-        <section class="data-tools cloud-tools" aria-label="Облачный прогресс">
-          <p class="menu-section-label" data-i18n="cloud">Облако и рейтинг</p>
-          <p id="cloud-status" class="menu-note quiet">не подключено · игра работает офлайн</p>
-          <div class="data-tools-row">
-            <button id="btn-cloud-account" class="menu-link" type="button" data-i18n="cloud_setup">Подключить</button>
-            <button id="btn-cloud-sync" class="menu-link" type="button" data-i18n="cloud_sync">Синхронизировать</button>
-            <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
-          </div>
-          <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
-          <details class="advanced-tools">
-            <summary class="menu-note quiet">Расширенные настройки облака</summary>
-            <label class="cloud-api-label" for="cloud-api-input">
-              <span class="menu-note quiet">URL Worker (Cloudflare)</span>
-              <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
-            </label>
-            <div class="data-tools-row">
-              <button id="btn-cloud-api-save" class="menu-link" type="button">Сохранить URL</button>
-              <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
-            </div>
-          </details>
-        </section>
-
-        <section class="data-tools social-tools" aria-label="Друзья и дуэли">
-          <p class="menu-section-label" data-i18n="social">Друзья и лиги</p>
-          <p id="social-profile" class="menu-note quiet">подключи облако для друзей</p>
-          <div class="data-tools-row">
-            <button id="btn-social-refresh" class="menu-link" type="button" data-i18n="refresh">Обновить</button>
-            <button id="btn-social-add" class="menu-link" type="button" data-i18n="add_friend">Добавить друга</button>
-            <button id="btn-social-duel" class="menu-link" type="button" data-i18n="ghost_duel">Дуэль призраков</button>
-            <button id="btn-league-board" class="menu-link" type="button" data-i18n="league">Лига сезона</button>
-          </div>
-          <ol id="league-board" class="cloud-leaderboard hidden" aria-live="polite"></ol>
-          <div id="social-list" class="social-list" aria-live="polite"></div>
-        </section>
-
-        <nav class="menu-foot" aria-label="Дополнительно">
-          <button id="btn-donate" class="menu-link" type="button">
-            <span class="btn-donate-main">Донат</span>
-            <span class="btn-donate-sub">поддержать игру</span>
+        <div class="menu-home-actions">
+          <button id="btn-shop" class="btn btn-secondary menu-home-btn" type="button" aria-label="Открыть магазин">
+            <span class="btn-main" data-i18n="shop">Магазин</span>
+            <span class="btn-sub"><span id="shop-top-marks">0</span> · <span data-i18n="shop_sub_short">герои</span></span>
           </button>
-          <a href="./landing.html" data-i18n="about">О игре</a>
-          <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
-          <a href="./support.html" data-i18n="support">Поддержка</a>
-          <details class="advanced-tools foot-advanced">
-            <summary>Для авторов</summary>
-            <a href="./editor.html">Редактор контента</a>
-          </details>
-        </nav>
+          <button id="btn-more" class="btn btn-ghost menu-home-btn" type="button">
+            <span class="btn-main" data-i18n="more">Ещё</span>
+            <span class="btn-sub" data-i18n="more_sub">режимы · настройки</span>
+          </button>
+        </div>
+
+        <button id="gift-cta" class="gift-cta hidden" type="button" aria-live="polite">
+          <span id="gift-cta-title" class="gift-cta-title">Подарок</span>
+          <span id="gift-cta-meta" class="gift-cta-meta"></span>
+        </button>
+        <p id="donate-thanks" class="menu-note quiet home-thanks" data-i18n="shop_sub">герои · следы · донат</p>
+        <button id="btn-how-to-play" class="menu-link how-to-play" type="button" data-i18n="how_to_play">Как играть</button>
       </div>
 
-      <!-- kept for JS economy hooks; hidden on start -->
       <span id="streak-start" class="hidden">0 дн</span>
       <span id="skin-name" class="hidden">чернь</span>
       <div id="daily-card" class="hidden"></div>
       <div id="skin-unlocks" class="hidden"></div>
       <button id="btn-marks-pack" class="hidden" type="button">+60 следов</button>
+      <button id="btn-haptics" class="hidden" type="button" aria-pressed="true">вибро</button>
       <i id="hold-fill" class="hidden" aria-hidden="true"></i>
+    </div>
+
+    <div id="screen-more" class="screen screen-menu screen-more hidden">
+      <div class="menu-veil" aria-hidden="true">
+        <div class="menu-veil-light"></div>
+        <div class="menu-veil-depth"></div>
+      </div>
+      <div class="more-shell">
+        <button id="btn-more-back" class="flow-back" type="button" data-i18n="back">назад</button>
+        <h2 class="flow-title" data-i18n="more">Ещё</h2>
+        <p class="flow-sub" data-i18n="more_lead">Режимы, настройки и прогресс</p>
+
+        <div class="menu-more">
+          <section class="data-tools" aria-label="Управление и режимы">
+            <p class="menu-section-label" data-i18n="modes">Режимы</p>
+            <div id="control-list" class="control-row" role="group" aria-label="Управление"></div>
+            <div class="mode-row" role="group" aria-label="Режимы">
+              <button id="btn-mode-daily" class="menu-toggle" type="button" aria-pressed="false" data-i18n="daily">день</button>
+              <button id="btn-mode-ghost" class="menu-toggle" type="button" aria-pressed="true" data-i18n="ghost_race">призрак</button>
+              <button id="btn-mode-coop" class="menu-toggle" type="button" aria-pressed="false" data-i18n="coop">дуэт</button>
+            </div>
+            <div class="run-mode-row" role="group" aria-label="Тип забега">
+              <button class="menu-toggle run-mode-btn" data-run-mode="endless" type="button" aria-pressed="false" data-i18n="endless">бесконечный</button>
+              <button class="menu-toggle run-mode-btn" data-run-mode="boss" type="button" aria-pressed="false" data-i18n="boss_rush">боссы</button>
+              <button class="menu-toggle run-mode-btn" data-run-mode="calm" type="button" aria-pressed="false" data-i18n="calm">спокойный</button>
+            </div>
+            <p id="mode-note" class="menu-note quiet">обычный забег</p>
+          </section>
+
+          <details class="access-details" open>
+            <summary class="menu-section-label" data-i18n="accessibility_quality">Доступность и качество</summary>
+            <div class="access-row" role="group" aria-label="Доступность" data-i18n-aria="accessibility">
+              <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
+              <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
+              <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
+              <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
+              <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
+              <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
+              <button id="btn-haptics-more" class="menu-toggle on" type="button" aria-pressed="true" data-i18n="haptics">вибрация</button>
+              <button id="btn-daily-reminder" class="menu-toggle" type="button" aria-pressed="false">напоминание · выкл</button>
+            </div>
+          </details>
+
+          <p id="daily-quest" class="menu-note" aria-live="polite"></p>
+          <p id="weekly-card" class="menu-note weekly-card" aria-live="polite"></p>
+          <section id="menu-trophies" class="menu-trophies" aria-label="Трофеи">
+            <p class="menu-section-label" data-i18n="trophies">Трофеи</p>
+            <div id="trophy-list" class="trophy-list" role="list"></div>
+          </section>
+
+          <section id="menu-gifts" class="menu-gifts hidden" aria-label="Подарки" data-i18n-aria="gifts">
+            <div id="gift-list" class="gift-rail" role="list"></div>
+          </section>
+          <p id="gift-next" class="menu-note quiet hidden" aria-live="polite"></p>
+          <p id="shop-progress" class="menu-note shop-progress" aria-live="polite"></p>
+
+          <section class="data-tools progression-tools" aria-label="Развитие">
+            <p class="menu-section-label" data-i18n="progression">Развитие</p>
+            <p id="progression-points" class="menu-note quiet">очки глубины · 0</p>
+            <div id="skill-tree" class="skill-tree"></div>
+          </section>
+
+          <section class="data-tools story-tools" aria-label="История">
+            <p class="menu-section-label" data-i18n="story">История глубины</p>
+            <p id="story-chapter" class="menu-note"></p>
+            <p id="story-biome" class="menu-note quiet"></p>
+          </section>
+
+          <section class="data-tools account-tools" aria-label="Аккаунт">
+            <p class="menu-section-label" data-i18n="account">Аккаунт</p>
+            <p id="account-status" class="menu-note quiet">гость · прогресс только на устройстве</p>
+            <div class="data-tools-row">
+              <button id="btn-account-manage" class="menu-link" type="button" data-i18n="auth_login">Вход</button>
+              <button id="btn-account-logout" class="menu-link hidden" type="button" data-i18n="auth_logout">Выйти</button>
+            </div>
+          </section>
+
+          <section class="data-tools" aria-label="Перенос прогресса">
+            <p class="menu-section-label" data-i18n="progress">Прогресс</p>
+            <p class="menu-note quiet" data-i18n="progress_help">Сохрани файл или перенеси код на другое устройство.</p>
+            <div class="data-tools-row">
+              <button id="btn-backup-export" class="menu-link" type="button" data-i18n="save">Сохранить</button>
+              <button id="btn-backup-code" class="menu-link" type="button" data-i18n="transfer_code">Код переноса</button>
+              <button id="btn-backup-import" class="menu-link" type="button" data-i18n="load">Загрузить</button>
+            </div>
+            <input id="backup-file" class="hidden" type="file" accept="application/json,.json" />
+          </section>
+
+          <section class="data-tools cloud-tools" aria-label="Облачный прогресс">
+            <p class="menu-section-label" data-i18n="cloud">Облако и рейтинг</p>
+            <p id="cloud-status" class="menu-note quiet">не подключено · игра работает офлайн</p>
+            <div class="data-tools-row">
+              <button id="btn-cloud-account" class="menu-link" type="button" data-i18n="cloud_setup">Подключить</button>
+              <button id="btn-cloud-sync" class="menu-link" type="button" data-i18n="cloud_sync">Синхронизировать</button>
+              <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
+            </div>
+            <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
+            <p id="local-board-help" class="menu-note quiet" data-i18n="local_board_help">Лучшие результаты на этом устройстве.</p>
+            <ol id="local-leaderboard" class="cloud-leaderboard" aria-live="polite"></ol>
+            <details class="advanced-tools">
+              <summary class="menu-note quiet" data-i18n="advanced_cloud">Расширенные настройки облака</summary>
+              <label class="cloud-api-label" for="cloud-api-input">
+                <span class="menu-note quiet">URL Worker (Cloudflare)</span>
+                <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
+              </label>
+              <div class="data-tools-row">
+                <button id="btn-cloud-api-save" class="menu-link" type="button" data-i18n="save_url">Сохранить URL</button>
+                <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
+              </div>
+            </details>
+          </section>
+
+          <section class="data-tools social-tools" aria-label="Друзья и дуэли">
+            <p class="menu-section-label" data-i18n="social">Друзья и лиги</p>
+            <p id="social-profile" class="menu-note quiet">подключи облако для друзей</p>
+            <div class="data-tools-row">
+              <button id="btn-social-refresh" class="menu-link" type="button" data-i18n="refresh">Обновить</button>
+              <button id="btn-social-add" class="menu-link" type="button" data-i18n="add_friend">Добавить друга</button>
+              <button id="btn-social-duel" class="menu-link" type="button" data-i18n="ghost_duel">Дуэль призраков</button>
+              <button id="btn-league-board" class="menu-link" type="button" data-i18n="league">Лига сезона</button>
+            </div>
+            <ol id="league-board" class="cloud-leaderboard hidden" aria-live="polite"></ol>
+            <div id="social-list" class="social-list" aria-live="polite"></div>
+          </section>
+
+          <nav class="menu-foot" aria-label="Дополнительно">
+            <button id="btn-donate" class="menu-link" type="button">
+              <span class="btn-donate-main" data-i18n="donate">Донат</span>
+              <span class="btn-donate-sub">поддержать игру</span>
+            </button>
+            <a href="./landing.html" data-i18n="about">О игре</a>
+            <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
+            <a href="./support.html" data-i18n="support">Поддержка</a>
+            <details class="advanced-tools foot-advanced">
+              <summary data-i18n="for_authors">Для авторов</summary>
+              <a href="./editor.html">Редактор контента</a>
+            </details>
+          </nav>
+        </div>
+      </div>
     </div>
 
     <div id="screen-hero" class="screen screen-flow hidden">
@@ -454,6 +532,7 @@
   <script src="js/analytics.js"></script>
   <script src="js/backup.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/account.js"></script>
   <script src="js/cloud.js"></script>
   <script src="js/social.js"></script>
   <script src="js/content.js"></script>
