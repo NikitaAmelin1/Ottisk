@@ -9330,6 +9330,8 @@ function boot() {
     updateDonateThanks();
     renderProgression();
     renderStory();
+    renderAccountUi();
+    setAuthMode(authMode);
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));
