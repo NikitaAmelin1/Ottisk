@@ -2696,3 +2696,38 @@ body {
     forced-color-adjust: none;
   }
 }
+
+/* Soft update banner */
+.update-banner {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, #071422 92%, transparent);
+  color: var(--foam);
+  backdrop-filter: blur(8px);
+}
+
+.update-banner.hidden {
+  display: none;
+}
+
+.update-banner-text {
+  margin: 0;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.update-banner-actions {
+  display: flex;
+  gap: 16px;
+}

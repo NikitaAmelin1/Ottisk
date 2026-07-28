@@ -9,6 +9,7 @@
 - Поддержка: [support.html](./support.html)
 - Редактор контента: [editor.html](./editor.html)
 - **Windows → App Store:** [store/WINDOWS.md](./store/WINDOWS.md)
+- **Android / Google Play:** [store/ANDROID.md](./store/ANDROID.md) · чеклист [store/PLAY_CHECKLIST.md](./store/PLAY_CHECKLIST.md)
 - Полный гайд стора: [store/APP_STORE.md](./store/APP_STORE.md)
 - Release QA: [store/RELEASE_QA.md](./store/RELEASE_QA.md)
 - Cloud Worker: [cloud/README.md](./cloud/README.md)

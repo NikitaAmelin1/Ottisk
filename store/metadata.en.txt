@@ -1,0 +1,36 @@
+Язык: en-US
+
+Title (30):
+OTTISK: Living Abyss
+
+Short description (80):
+Hold your creature, gather light, and survive hunters in a living abyss.
+
+Full description:
+The creature lives only under your finger.
+
+OTTISK is an atmospheric one-touch survival arcade. Hold to keep your creature alive, guide it to light sources, and change course when hunters emerge from the dark.
+
+Every run becomes a tense dance:
+• collect light and leave a trail in the abyss;
+• unlock heroes and choose mutations;
+• face the Leviathan and the multi-phase Kraken;
+• join the daily run and weekly challenges;
+• earn trophies and improve your best score.
+
+Easy to learn, hard to master. How far can you go without letting go?
+
+Category:
+Games → Arcade
+
+Tags:
+Arcade, Survival, Casual
+
+Privacy policy:
+https://nikitaamelin1.github.io/Ottisk/privacy.html
+
+Website:
+https://nikitaamelin1.github.io/Ottisk/
+
+Support:
+https://nikitaamelin1.github.io/Ottisk/support.html
