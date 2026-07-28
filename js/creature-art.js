@@ -1616,6 +1616,79 @@
       ctx.restore();
     }
 
+    function drawSeal(body, alpha = 1) {
+      const ink = api.lifeInkColor();
+      const accent = mixColor(cssVar("--accent-b", "#7affd4"), "#b8dcff", 0.35);
+      const aim = body.aim ?? -Math.PI / 2;
+      const s = body.r;
+      const wob = body.wobble || 0;
+      ctx.save();
+      ctx.translate(body.x, body.y);
+      ctx.rotate(aim);
+      ctx.globalAlpha = alpha;
+      softGlow(0, 0, s * 2.2, accent, 0.2);
+      ctx.fillStyle = mixColor(ink, "#102028", 0.4);
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.95, 0);
+      ctx.quadraticCurveTo(-s * 1.55, -s * 0.55, -s * 1.85, -s * 0.05);
+      ctx.quadraticCurveTo(-s * 1.35, 0.05 * s, -s * 1.85, s * 0.12);
+      ctx.quadraticCurveTo(-s * 1.55, s * 0.55, -s * 0.95, 0);
+      ctx.fill();
+      const bodyG = ctx.createLinearGradient(0, -s, 0, s);
+      bodyG.addColorStop(0, mixColor(ink, "#ffffff", 0.42));
+      bodyG.addColorStop(0.55, mixColor(ink, accent, 0.18));
+      bodyG.addColorStop(1, mixColor(ink, "#182028", 0.45));
+      ctx.fillStyle = bodyG;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 1.2, s * 0.72, 0.05 * Math.sin(wob), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.38)";
+      ctx.beginPath();
+      ctx.ellipse(s * 0.1, s * 0.2, s * 0.7, s * 0.28, 0.1, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = mixColor(ink, accent, 0.2);
+      ctx.beginPath();
+      ctx.ellipse(s * 0.95, 0.02 * s, s * 0.38, s * 0.22, 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      eye(s * 0.42, -s * 0.16, s * 0.15, { angry: false, lookX: s * 0.04 });
+      ctx.restore();
+    }
+
+    function drawLantern(body, alpha = 1) {
+      const ink = api.lifeInkColor();
+      const accent = cssVar("--gold", "#ffe898");
+      const foam = cssVar("--foam", "#fffdf8");
+      const aim = body.aim ?? -Math.PI / 2;
+      const s = body.r;
+      const wob = body.wobble || 0;
+      ctx.save();
+      ctx.translate(body.x, body.y);
+      ctx.rotate(aim);
+      ctx.globalAlpha = alpha;
+      softGlow(0, 0, s * 2.5, accent, 0.28);
+      softGlow(s * 1.05, -s * 0.55, s * 0.7, foam, 0.55);
+      ctx.strokeStyle = mixColor(ink, accent, 0.55);
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.25, -s * 0.35);
+      ctx.quadraticCurveTo(s * 0.7, -s * 1.05, s * 1.05, -s * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(s * 1.05, -s * 0.55, s * 0.24 + Math.sin(wob) * s * 0.02, 0, Math.PI * 2);
+      ctx.fill();
+      const bodyG = ctx.createRadialGradient(-s * 0.1, 0, s * 0.1, 0, 0, s);
+      bodyG.addColorStop(0, mixColor(ink, foam, 0.4));
+      bodyG.addColorStop(0.55, mixColor(ink, accent, 0.2));
+      bodyG.addColorStop(1, mixColor(ink, "#101820", 0.45));
+      ctx.fillStyle = bodyG;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.95, s * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+      eye(s * 0.28, -s * 0.12, s * 0.14, { angry: false, lookX: s * 0.04 });
+      ctx.restore();
+    }
+
     function drawStarfish(body, alpha = 1) {
       const ink = api.lifeInkColor();
       const accent = cssVar("--accent-a", "#ff9a62");
@@ -1771,6 +1844,8 @@
       drawSeahorse,
       drawWhale,
       drawDolphin,
+      drawSeal,
+      drawLantern,
       drawStarfish,
       eye,
     };

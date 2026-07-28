@@ -1,4 +1,4 @@
-const CACHE = "ottisk-v87";
+const CACHE = "ottisk-v88";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./support.html",
   "./donate.html",
   "./landing.html",
+  "./trailer.html",
   "./editor.html",
   "./content/catalog.json",
   "./version.json",

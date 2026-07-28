@@ -18,6 +18,10 @@
     jellyfish: Object.freeze({ hazard: 0.76 }),
     turtle: Object.freeze({ hunger: 0.78 }),
     crab: Object.freeze({ shields: 1, recharge: 32 }),
+    dolphin: Object.freeze({ evade: 0.86 }),
+    starfish: Object.freeze({ hunger: 0.72 }),
+    seal: Object.freeze({ evade: 0.84, hunger: 0.92 }),
+    lantern: Object.freeze({ hazard: 0.8, collect: 1.1 }),
     manta: Object.freeze({ hazard: 0.72, collect: 1.04 }),
     angler: Object.freeze({ hazard: 0.68, collect: 1.16 }),
     nautilus: Object.freeze({ shields: 2, recharge: 22 }),
@@ -44,6 +48,7 @@
     Object.freeze({ id: "leviathan", at: 360, pressure: 1.5 }),
     Object.freeze({ id: "rays", at: 440, pressure: 1.32 }),
     Object.freeze({ id: "ghosts", at: 540, pressure: 1.48 }),
+    Object.freeze({ id: "trench_maw", at: 600, pressure: 1.58 }),
     Object.freeze({ id: "abyss", at: 660, pressure: 1.62 }),
     Object.freeze({ id: "kraken", at: 780, pressure: 1.8 }),
   ]);
@@ -124,7 +129,7 @@
     while (elapsed < input.maxSeconds) {
       const dt = Math.min(input.step, input.maxSeconds - elapsed);
       elapsed += dt;
-      const opening = elapsed <= 10 ? 0.72 : 1;
+      const opening = elapsed <= 12 ? 0.62 : 1;
       hunger -= (100 / 12) * difficulty.hunger * (hero.hunger || 1) * policy.still * opening * dt;
 
       // Roughly one collectible per second for balanced play. Miss streaks
@@ -151,7 +156,7 @@
         break;
       }
 
-      if (elapsed > 10) {
+      if (elapsed > 12) {
         const wave = waveFor(score);
         const scorePressure = 1 + Math.min(2.4, score / 260);
         const difficultyPressure =
@@ -165,7 +170,13 @@
             shields -= 1;
             if (hero.recharge && recharge <= 0) recharge = hero.recharge;
           } else {
-            death = wave.id === "leviathan" ? "leviathan" : wave.id === "kraken" ? "kraken" : "hunter";
+            death = wave.id === "leviathan"
+              ? "leviathan"
+              : wave.id === "kraken"
+                ? "kraken"
+                : wave.id === "trench_maw"
+                  ? "maw"
+                  : "hunter";
             break;
           }
         }

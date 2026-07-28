@@ -9,6 +9,7 @@ const assets = [
   "support.html",
   "donate.html",
   "landing.html",
+  "trailer.html",
   "editor.html",
   "content",
   "ottisk-ad-ru-15s.mp4",

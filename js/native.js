@@ -19,6 +19,13 @@ const Native = {
   async requestReview() {
     return false;
   },
+  async unlockAchievement() {
+    return false;
+  },
+  async showRewardedAd() {
+    return { ok: false, message: "реклама · только в приложении" };
+  },
+  adsAvailable: false,
   async getAppInfo() {
     return { version: Native.appVersion, build: String(Native.versionCode), platform: Native.platform };
   },
@@ -229,6 +236,29 @@ async function bootNative() {
       // noop
     }
     return false;
+  };
+
+  // Optional Play Games / rewarded ads plugins — no-op until native SDKs are wired.
+  Native.unlockAchievement = async (achievementId) => {
+    try {
+      if (typeof p.OttiskPlayGames?.unlockAchievement === "function") {
+        const result = await p.OttiskPlayGames.unlockAchievement({ id: String(achievementId || "") });
+        return !!result?.ok;
+      }
+    } catch (_) {}
+    return false;
+  };
+
+  Native.adsAvailable = typeof p.OttiskAds?.showRewarded === "function";
+  Native.showRewardedAd = async () => {
+    if (!Native.adsAvailable) {
+      return { ok: false, message: "реклама ещё не подключена" };
+    }
+    try {
+      return await p.OttiskAds.showRewarded();
+    } catch (_) {
+      return { ok: false, message: "реклама недоступна" };
+    }
   };
 
   Native.scheduleDailyReminder = async (options = {}) => {
