@@ -15,6 +15,7 @@ const assets = [
   "robots.txt",
   "sitemap.xml",
   "manifest.json",
+  "version.json",
   "sw.js",
   "css",
   "js",

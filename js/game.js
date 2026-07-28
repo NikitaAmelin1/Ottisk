@@ -3047,6 +3047,7 @@ function loadMeta() {
     onboarded: !!raw?.onboarded || best > 0 || marks > 0 || Math.max(0, Number(raw?.runs || 0)) > 0,
     starterGift: !!raw?.starterGift || best > 0 || marks > 0,
     ratePrompted: !!raw?.ratePrompted,
+    rateAutoAsked: !!raw?.rateAutoAsked,
     runs: Math.max(0, Number(raw?.runs || 0)),
     weekId: currentWeek,
     weekBest: weekFresh ? 0 : Math.max(0, Number(raw?.weekBest || 0)),
@@ -3930,7 +3931,7 @@ async function purchaseIapHero(id) {
   } catch (_) {
     location.href = `./donate.html?tip=${encodeURIComponent(id === "sub" ? "submarine" : id)}`;
   }
-  showToast(`${hero.name} · ${hero.priceLabel || ""} · App Store`);
+  showToast(`${hero.name} · ${hero.priceLabel || ""} · ${storePayLabel()}`);
   return false;
 }
 
@@ -4609,7 +4610,24 @@ function advanceOnboard() {
 
 function isNativeShop() {
   const native = window.OttiskNative;
-  return !!(native?.isNative && typeof native.purchase === "function");
+  return !!(native?.isNative && native.billingAvailable);
+}
+
+function isNativeShell() {
+  return !!window.OttiskNative?.isNative;
+}
+
+function storePayLabel() {
+  const native = window.OttiskNative;
+  if (native?.platform === "android") return "Google Play";
+  if (native?.isNative) return "App Store";
+  return window.OttiskI18n?.locale === "en" ? "donate page" : "донат";
+}
+
+function canOfferRealMoney() {
+  if (isNativeShop()) return true;
+  if (isNativeShell()) return false;
+  return true;
 }
 
 function updateDonateThanks() {
@@ -4631,10 +4649,25 @@ function renderDonateOptions() {
   if (!list) return;
   list.textContent = "";
   const native = isNativeShop();
+  const pay = storePayLabel();
   if (note) {
-    note.textContent = native
-      ? "Оплата через App Store. В знак благодарности сразу начислим следы."
-      : "На сайте откроется страница доната. В приложении App Store — покупка внутри игры.";
+    if (isNativeShell() && !native) {
+      note.textContent = window.OttiskI18n?.locale === "en"
+        ? "Real-money purchases are unavailable until store billing is ready. Cosmetics still unlock with trails."
+        : "Покупки за деньги временно недоступны, пока не подключён магазин. Косметику по-прежнему открывают следы.";
+    } else {
+      note.textContent = native
+        ? (window.OttiskI18n?.locale === "en"
+          ? `Pay with ${pay}. Trails are granted right after a successful purchase.`
+          : `Оплата через ${pay}. После покупки сразу начислим следы.`)
+        : (window.OttiskI18n?.locale === "en"
+          ? "On the website a donate page opens. In the app — Google Play / App Store purchase."
+          : "На сайте откроется страница доната. В приложении — покупка через Google Play / App Store.");
+    }
+  }
+  if (!canOfferRealMoney()) {
+    updateDonateThanks();
+    return;
   }
   for (const tip of DONATE_TIPS) {
     const btn = document.createElement("button");
@@ -4650,16 +4683,15 @@ function renderDonateOptions() {
     btn.addEventListener("click", () => purchaseDonateTip(tip.id));
     list.appendChild(btn);
   }
-  // Keep marks pack as an extra option in the same sheet.
   const pack = document.createElement("button");
   pack.type = "button";
   pack.className = "donate-tip pack";
   pack.innerHTML = `
     <span class="donate-tip-copy">
       <span class="donate-tip-title">Пак следов</span>
-      <span class="donate-tip-sub">+${MARKS_PACK_AMOUNT} следов без доната</span>
+      <span class="donate-tip-sub">+${MARKS_PACK_AMOUNT} следов</span>
     </span>
-    <span class="donate-tip-price">${native ? "IAP" : "App Store"}</span>
+    <span class="donate-tip-price">${native ? "IAP" : pay}</span>
   `;
   pack.addEventListener("click", () => purchaseMarksPack());
   list.appendChild(pack);
@@ -4859,16 +4891,30 @@ function renderShop() {
     }
   }
   const packSub = document.getElementById("shop-pack-sub");
-  if (packSub) packSub.textContent = isNativeShop() ? "купить следы · App Store" : "купить следы · страница доната";
+  const packBtn = document.getElementById("btn-shop-pack");
+  const pay = storePayLabel();
+  const money = canOfferRealMoney();
+  if (packSub) {
+    packSub.textContent = !money
+      ? (window.OttiskI18n?.locale === "en" ? "billing unavailable" : "оплата недоступна")
+      : (isNativeShop() ? `купить следы · ${pay}` : `купить следы · ${pay}`);
+  }
+  if (packBtn) {
+    packBtn.classList.toggle("hidden", !money);
+    packBtn.disabled = !money;
+  }
   const starterBtn = document.getElementById("btn-shop-starter");
   if (starterBtn) {
     const owned = !!state.meta.starterPackBought;
+    starterBtn.classList.toggle("hidden", !money && !owned);
     starterBtn.classList.toggle("owned", owned);
-    starterBtn.disabled = owned;
+    starterBtn.disabled = owned || !money;
     starterBtn.innerHTML = owned
       ? `<span class="btn-main">Стартовый пак · твой</span><span class="btn-sub">скат + удильщик + наутилус</span>`
-      : `<span class="btn-main">Стартовый пак · ${STARTER_PACK_PRICE_LABEL}</span><span class="btn-sub">3 героя + 60 следов · ${isNativeShop() ? "App Store" : "донат"}</span>`;
+      : `<span class="btn-main">Стартовый пак · ${STARTER_PACK_PRICE_LABEL}</span><span class="btn-sub">3 героя + 60 следов · ${pay}</span>`;
   }
+  const restoreBtn = document.getElementById("btn-restore");
+  if (restoreBtn) restoreBtn.classList.toggle("hidden", !isNativeShop());
   renderShopIapHeroes();
   renderShopCosmetics();
   renderDonateOptions();
@@ -4879,12 +4925,16 @@ function renderShopIapHeroes() {
   const list = document.getElementById("shop-iap-heroes");
   if (!list || !state.meta) return;
   list.textContent = "";
+  const money = canOfferRealMoney();
+  const pay = storePayLabel();
   for (const hero of HEROES.filter((h) => h.iap)) {
     const owned = isHeroOwned(hero.id);
+    if (!owned && !money) continue;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = `btn btn-secondary shop-sub-btn${owned ? " owned" : ""}`;
-    btn.innerHTML = `<span class="btn-main">${hero.name} · ${owned ? "твой" : (hero.priceLabel || "")}</span><span class="btn-sub">${owned ? `${hero.blurb || hero.ability} · нажми, чтобы выбрать` : `${hero.blurb || hero.ability} · ${isNativeShop() ? "купить в App Store" : "App Store / донат"}`}</span>`;
+    btn.disabled = !owned && !money;
+    btn.innerHTML = `<span class="btn-main">${hero.name} · ${owned ? "твой" : (hero.priceLabel || "")}</span><span class="btn-sub">${owned ? `${hero.blurb || hero.ability} · нажми, чтобы выбрать` : `${hero.blurb || hero.ability} · ${pay}`}</span>`;
     btn.addEventListener("click", () => {
       if (owned) {
         state.meta.activeHero = hero.id;
@@ -4895,9 +4945,23 @@ function renderShopIapHeroes() {
         showToast(`${hero.name} · выбран`);
         return;
       }
+      if (!money) {
+        showToast(window.OttiskI18n?.locale === "en" ? "billing unavailable" : "оплата недоступна");
+        return;
+      }
       purchaseIapHero(hero.id).catch(() => showToast("покупка недоступна"));
     });
     list.appendChild(btn);
+  }
+  if (!list.children.length) {
+    const empty = document.createElement("p");
+    empty.className = "shop-section-hint";
+    empty.textContent = money
+      ? ""
+      : (window.OttiskI18n?.locale === "en"
+        ? "Paid heroes unlock after Google Play products are configured."
+        : "Платные герои появятся после настройки продуктов Google Play.");
+    if (empty.textContent) list.appendChild(empty);
   }
 }
 
@@ -4960,7 +5024,9 @@ async function purchaseMarksPack() {
   } catch (_) {
     location.href = "./donate.html?tip=marks";
   }
-  showToast("на сайте · или в App Store");
+  showToast(window.OttiskI18n?.locale === "en"
+    ? `on the site · or in ${storePayLabel()}`
+    : `на сайте · или в ${storePayLabel()}`);
 }
 
 async function maybeAskRate() {
@@ -4975,6 +5041,12 @@ async function maybeAskRate() {
     return;
   }
   btnRate?.classList.remove("hidden");
+  // Native stores: auto-trigger in-app review once after a strong run.
+  if (window.OttiskNative?.isNative && !state.meta.rateAutoAsked) {
+    state.meta.rateAutoAsked = true;
+    saveMeta();
+    await requestReview().catch(() => {});
+  }
 }
 
 async function requestReview() {
@@ -4985,10 +5057,12 @@ async function requestReview() {
   const native = window.OttiskNative;
   if (native?.isNative && typeof native.requestReview === "function") {
     await native.requestReview().catch(() => {});
-    showToast("спасибо");
+    showToast(window.OttiskI18n?.locale === "en" ? "thanks" : "спасибо");
     return;
   }
-  showToast("спасибо — оценка будет в App Store");
+  showToast(window.OttiskI18n?.locale === "en"
+    ? "thanks — rate us on the store page"
+    : "спасибо — оценка будет в магазине");
 }
 
 function awardMarks(amount, opts = {}) {
@@ -5429,10 +5503,10 @@ function continueOffer() {
     };
   }
   return {
-    ok: true,
-    kind: "iap",
+    ok: canOfferRealMoney(),
+    kind: canOfferRealMoney() ? "iap" : "none",
     label: "Продолжить",
-    sub: `${CONTINUE_PRICE_LABEL} · App Store`,
+    sub: canOfferRealMoney() ? `${CONTINUE_PRICE_LABEL} · ${storePayLabel()}` : "нужны следы",
     cost: 0,
   };
 }
@@ -5453,7 +5527,7 @@ function refreshContinueUi() {
     } else if (offer.kind === "marks") {
       continueHintEl.textContent = `Можно за ${MARKS_CONTINUE_COST} следов или докупить за ${CONTINUE_PRICE_LABEL}.`;
     } else if (offer.kind === "iap") {
-      continueHintEl.textContent = `Дополнительный шанс за ${CONTINUE_PRICE_LABEL}. В App Store — сразу, на сайте — донат.`;
+      continueHintEl.textContent = `Дополнительный шанс за ${CONTINUE_PRICE_LABEL}. В ${storePayLabel()} — сразу, на сайте — донат.`;
     } else {
       continueHintEl.textContent = "Лимит продолжений за этот забег исчерпан.";
     }
@@ -6249,7 +6323,7 @@ async function purchaseContinueIap() {
   } catch (_) {
     location.href = "./donate.html?tip=continue";
   }
-  showToast(`продолжение · ${CONTINUE_PRICE_LABEL} · App Store / СБП`);
+  showToast(`продолжение · ${CONTINUE_PRICE_LABEL} · ${storePayLabel()}`);
   refreshContinueUi();
 }
 
@@ -9808,6 +9882,19 @@ function boot() {
   });
   updateStartButtonCopy();
   renderAccountUi();
+  window.OttiskPlayOps?.wireUpdateBanner?.();
+  window.OttiskPlayOps?.checkSoftUpdate?.();
+  window.OttiskPlayOps?.syncReminderToggle?.();
+  window.OttiskPlayOps?.ensureReminderScheduled?.();
+  document.getElementById("btn-daily-reminder")?.addEventListener("click", async () => {
+    const result = await window.OttiskPlayOps?.toggleReminder?.();
+    if (result?.message) showToast(result.message);
+  });
+  document.addEventListener("ottisk-native-ready", () => {
+    renderShop();
+    window.OttiskPlayOps?.checkSoftUpdate?.();
+    window.OttiskPlayOps?.ensureReminderScheduled?.();
+  });
   // First death returns to tips + starter gift; the live tutorial teaches the hook.
   if (window.OttiskAccount?.isReady?.()) {
     showHomeMenu();
@@ -9821,7 +9908,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=86")
+      .register("./sw.js?v=87")
       .then((reg) => reg.update())
       .catch(() => {});
   }
@@ -9829,8 +9916,10 @@ function boot() {
 
 async function restorePurchases() {
   const native = window.OttiskNative;
-  if (!native?.isNative) {
-    showToast("восстановление · только в App Store");
+  if (!native?.isNative || !native.billingAvailable) {
+    showToast(window.OttiskI18n?.locale === "en"
+      ? "restore · only in the store app"
+      : "восстановление · только в приложении магазина");
     return false;
   }
   showToast("восстанавливаем покупки…");

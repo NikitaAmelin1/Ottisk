@@ -1,6 +1,6 @@
 {
   "name": "ottisk",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "ОТТИСК — существо живёт только под пальцем",
   "scripts": {
@@ -27,6 +27,7 @@
     "@capacitor/core": "^7.4.2",
     "@capacitor/haptics": "^7.0.2",
     "@capacitor/ios": "^7.4.2",
+    "@capacitor/local-notifications": "^7.0.7",
     "@capacitor/share": "^7.0.2",
     "@capacitor/splash-screen": "^7.0.2",
     "@capacitor/status-bar": "^7.0.2"

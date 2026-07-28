@@ -34,7 +34,12 @@ export function validateRelease(rootDirectory) {
     "support.html",
     "codemagic.yaml",
     "store/metadata.android.txt",
+    "store/metadata.en.txt",
     "store/metadata.ru.txt",
+    "store/DATA_SAFETY.md",
+    "store/CONTENT_RATING.md",
+    "store/PLAY_CHECKLIST.md",
+    "version.json",
     "icons/icon.svg",
     "android/app/build.gradle",
     "ios/App/App.xcodeproj/project.pbxproj",
@@ -92,6 +97,16 @@ export function validateRelease(rootDirectory) {
   for (const label of ["Политика конфиденциальности", "Сайт", "Поддержка"]) {
     const value = field(androidMetadata, label);
     if (!HTTPS_URL.test(value)) errors.push(`Android metadata ${label} must be an HTTPS URL`);
+  }
+
+  const enMetadata = text(root, "store/metadata.en.txt");
+  const enTitle = field(enMetadata, "Title \\(\\d+\\)");
+  const enShort = field(enMetadata, "Short description \\(\\d+\\)");
+  if (!enTitle || enTitle.length > 30) errors.push("English title must contain 1–30 characters");
+  if (!enShort || enShort.length > 80) errors.push("English short description must contain 1–80 characters");
+  for (const label of ["Privacy policy", "Website", "Support"]) {
+    const value = field(enMetadata, label);
+    if (!HTTPS_URL.test(value)) errors.push(`English metadata ${label} must be an HTTPS URL`);
   }
 
   const iosMetadata = text(root, "store/metadata.ru.txt");

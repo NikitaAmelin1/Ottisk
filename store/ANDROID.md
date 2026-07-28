@@ -1,6 +1,7 @@
 # Android / Google Play
 
 Проект Android создан через Capacitor 7 в каталоге `android/`.
+Полный чеклист выпуска: [PLAY_CHECKLIST.md](./PLAY_CHECKLIST.md).
 
 ## Локальная сборка
 
@@ -22,15 +23,28 @@ cd android
 
 APK появится в `android/app/build/outputs/apk/debug/`.
 
+## Play Billing
+
+В приложении есть нативный плагин `OttiskIAP` (`OttiskIAPPlugin.java`):
+- Google Play Billing Library 7
+- In-App Review
+- product ID из `js/game.js`
+
+Пока продукты не созданы в Play Console, платные кнопки скрываются (`billingAvailable` / `canOfferRealMoney`).
+Косметика и герои за следы работают всегда.
+
+Создайте in-app products по списку в `PLAY_CHECKLIST.md`, добавьте license testers, проверьте Internal testing.
+
 ## Перед публикацией
 
-1. Настроить upload key в защищённом хранилище Codemagic (не в Git).
-2. Выполнить `npm run release:validate`.
-3. Запустить Codemagic workflow `android-signed-release` и получить подписанный Android App Bundle (`.aab`).
-4. Заполнить карточку Google Play, Data Safety и ссылку на `privacy.html`.
-5. Проверить игру на телефонах 60/90/120 Гц и с разными вырезами экрана.
-6. Цифровые покупки в Google Play должны использовать Play Billing. В текущей версии они остаются недоступными в Android-сборке; StoreKit не переносится на Android автоматически.
+1. Upload key в Codemagic (`ottisk_release`) — не в Git.
+2. `npm run release:validate`
+3. Workflow `android-signed-release` → `ottisk-release.aab`
+4. Карточка: `metadata.android.txt` + `metadata.en.txt`, скриншоты, feature graphic
+5. Data Safety: `DATA_SAFETY.md`
+6. Content rating: `CONTENT_RATING.md`
+7. Internal testing → Play Vitals → Production
 
-Идентификатор приложения: `com.amelin.ottisk`.
+Идентификатор: `com.amelin.ottisk` · versionCode в `android/app/build.gradle`.
 
-Полная матрица устройств, команды QA и список внешних credentials: [RELEASE_QA.md](./RELEASE_QA.md).
+Device QA: [RELEASE_QA.md](./RELEASE_QA.md).
