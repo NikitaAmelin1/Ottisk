@@ -37,8 +37,8 @@
 
   const WAVES = Object.freeze([
     Object.freeze({ id: "school", at: 0, pressure: 0.8 }),
-    Object.freeze({ id: "darts", at: 45, pressure: 1.08 }),
-    Object.freeze({ id: "jellies", at: 100, pressure: 1.02 }),
+    Object.freeze({ id: "darts", at: 60, pressure: 1.08 }),
+    Object.freeze({ id: "jellies", at: 115, pressure: 1.02 }),
     Object.freeze({ id: "eels", at: 170, pressure: 1.16 }),
     Object.freeze({ id: "sharks", at: 260, pressure: 1.28 }),
     Object.freeze({ id: "leviathan", at: 360, pressure: 1.5 }),

@@ -375,7 +375,7 @@ const WAVES = [
   },
   {
     id: "darts",
-    at: 45,
+    at: 60,
     name: "стрелки",
     species: "dart",
     maxBonus: 1,
@@ -385,7 +385,7 @@ const WAVES = [
   },
   {
     id: "jellies",
-    at: 100,
+    at: 115,
     name: "медузы",
     species: "jelly",
     maxBonus: 1,
@@ -759,6 +759,9 @@ const state = {
   maxHunger: 100,
   progressionRevives: 0,
   replaySamples: [],
+  pathTrail: [],
+  pathTrailAcc: 0,
+  ambience: "reef",
   replaySampleAcc: 0,
   tipFlags: {
     move: false,
@@ -817,6 +820,12 @@ function clamp(v, min, max) {
 
 function tr(key, fallback = "") {
   return window.OttiskI18n?.t?.(key, fallback) ?? fallback;
+}
+
+function trf(key, fallback, vars = {}) {
+  let s = tr(key, fallback);
+  for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
 }
 
 function rand(min, max) {
@@ -1211,6 +1220,26 @@ function hum(on) {
   state.humNode = { o1, o2, o3, lfo, g, noise, noiseGain, filter, noiseFilter };
 }
 
+function setGameplayAmbience(kind = "reef") {
+  const next = kind === "kelp" || kind === "trench" ? kind : "reef";
+  if (state.ambience === next) return;
+  state.ambience = next;
+  lastHumKey = "";
+  if (!state.humNode || !state.audio) return;
+  const ac = state.audio;
+  const t = ac.currentTime;
+  const profile =
+    next === "trench" ? { base: 36, mul2: 1.33, mul3: 1.88, filter: 260, noise: 180, lfo: 0.12 }
+    : next === "kelp" ? { base: 52, mul2: 1.42, mul3: 2.1, filter: 480, noise: 340, lfo: 0.22 }
+    : { base: 48, mul2: 1.5, mul3: 2.02, filter: 420, noise: 280, lfo: 0.18 };
+  state.humNode.o1.frequency.setTargetAtTime(profile.base, t, 0.35);
+  state.humNode.o2.frequency.setTargetAtTime(profile.base * profile.mul2, t, 0.35);
+  state.humNode.o3.frequency.setTargetAtTime(profile.base * profile.mul3, t, 0.4);
+  state.humNode.filter.frequency.setTargetAtTime(profile.filter, t, 0.4);
+  state.humNode.noiseFilter.frequency.setTargetAtTime(profile.noise, t, 0.4);
+  try { state.humNode.lfo.frequency.setTargetAtTime(profile.lfo, t, 0.5); } catch (_) {}
+}
+
 function updateHum(dt = 0.016) {
   if (!state.humNode || !state.audio || !state.life) return;
   humAcc += dt;
@@ -1222,15 +1251,19 @@ function updateHum(dt = 0.016) {
     const d2 = dist2(h.x, h.y, state.life.x, state.life.y);
     hunterBoost = Math.max(hunterBoost, clamp(1 - Math.sqrt(d2) / 220, 0, 1));
   }
-  const key = `${(urgency * 20) | 0}|${(hunterBoost * 20) | 0}`;
+  const amb = state.ambience || "reef";
+  const key = `${amb}|${(urgency * 20) | 0}|${(hunterBoost * 20) | 0}`;
   if (key === lastHumKey) return;
   lastHumKey = key;
   const ac = state.audio;
-  const base = 46 + urgency * 54 + hunterBoost * 28;
+  const ambBase = amb === "trench" ? 36 : amb === "kelp" ? 52 : 46;
+  const ambMul2 = amb === "trench" ? 1.33 : amb === "kelp" ? 1.42 : 1.5;
+  const ambMul3 = amb === "trench" ? 1.88 : amb === "kelp" ? 2.1 : 2.02;
+  const base = ambBase + urgency * 54 + hunterBoost * 28;
   const t = ac.currentTime;
   state.humNode.o1.frequency.setTargetAtTime(base, t, 0.1);
-  state.humNode.o2.frequency.setTargetAtTime(base * 1.5, t, 0.1);
-  state.humNode.o3.frequency.setTargetAtTime(base * 2.02, t, 0.12);
+  state.humNode.o2.frequency.setTargetAtTime(base * ambMul2, t, 0.1);
+  state.humNode.o3.frequency.setTargetAtTime(base * ambMul3, t, 0.12);
   state.humNode.filter.frequency.setTargetAtTime(320 + urgency * 520 + hunterBoost * 380, t, 0.12);
   state.humNode.g.gain.setTargetAtTime(0.01 + urgency * 0.022 + hunterBoost * 0.014, t, 0.1);
   state.humNode.noiseGain.gain.setTargetAtTime(0.004 + urgency * 0.012 + hunterBoost * 0.01, t, 0.12);
@@ -1949,9 +1982,28 @@ function playSparkTone(type) {
   else if (type === "comet") sfxCometEat();
   else if (type === "deep") sfxDeepEat();
   else if (type === "seed") sfxSeedEat();
-  else if (type === "ember") sfxCometEat();
-  else if (type === "mirror") sfxCoolEat();
+  else if (type === "ember") sfxEmberEat();
+  else if (type === "mirror") sfxMirrorEat();
   else sfxPlanktonEat(state.combo || 0);
+}
+
+function sfxEmberEat() {
+  playOsc({ freq: 220, endFreq: 520, type: "sawtooth", gain: 0.028, dur: 0.16, filterFreq: 1800 });
+  playOsc({ freq: 640, endFreq: 180, type: "triangle", gain: 0.018, dur: 0.18, delay: 0.04, filterFreq: 2400 });
+}
+
+function sfxMirrorEat() {
+  playOsc({ freq: 880, endFreq: 1320, type: "sine", gain: 0.02, dur: 0.14, filterFreq: 3200 });
+  playOsc({ freq: 1320, endFreq: 660, type: "triangle", gain: 0.014, dur: 0.16, delay: 0.05, filterFreq: 3600 });
+  playOsc({ freq: 440, endFreq: 880, type: "sine", gain: 0.01, dur: 0.2, delay: 0.08 });
+}
+
+function sfxBossClear(kind = "leviathan") {
+  const deep = kind === "kraken";
+  playOsc({ freq: deep ? 48 : 64, endFreq: deep ? 28 : 40, type: "sawtooth", gain: 0.04, dur: 0.42, attack: 0.02, filterFreq: 260 });
+  playOsc({ freq: deep ? 96 : 120, endFreq: 220, type: "triangle", gain: 0.03, dur: 0.3, delay: 0.05, filterFreq: 700 });
+  playOsc({ freq: 440, endFreq: 880, type: "sine", gain: 0.022, dur: 0.24, delay: 0.12 });
+  playOsc({ freq: 880, endFreq: 1320, type: "triangle", gain: 0.016, dur: 0.28, delay: 0.2 });
 }
 
 function showCombo(text, fever = false) {
@@ -1984,11 +2036,11 @@ function activeEventId() {
 
 function startRunEvent(def) {
   state.event = { id: def.id, title: def.title, t: def.dur };
-  setEventChip(`событие · ${def.title}`);
+  setEventChip(`${tr("event_chip", "событие")} · ${def.title}`);
   pulseUnlock(cssVar("--gold", "#ffe898"), 0.12);
   tipOnce(`event_${def.id}`, def.title.toUpperCase(), 1600, {
     persist: true,
-    first: `Событие: ${def.title}`,
+    first: `${tr("event_chip", "Событие")}: ${def.title}`,
     firstMs: 2200,
   });
   if (def.id === "raid") {
@@ -2293,21 +2345,19 @@ function difficultyScale() {
   return skillSoftScale() * playerDifficulty().speed;
 }
 
-/** Ease the mid-run spike across the longer wave ladder. */
+/** Ease early game and mid-run spike across the wave ladder. */
 function midgamePace() {
   const s = state.score || 0;
   let pace = 1;
-  if (s < 30) pace = 1;
-  else if (s < 80) pace = 0.88;
-  else if (s < 150) pace = 0.82;
-  else if (s < 240) pace = 0.85;
-  else if (s < 340) pace = 0.9;
-  else if (s < 460) pace = 0.93;
-  else if (s < 600) pace = 0.96;
-  else pace = 1;
+  if (s < 30) pace = 0.84;
+  else if (s < 60) pace = 0.9;
+  else if (s < 120) pace = 0.94;
+  else if (s < 240) pace = 0.98;
+  else if (s < 460) pace = 1.01;
+  else pace = 1.03;
   // Easy stays gentler late; hard keeps more pressure.
   if (playerDifficulty().id === "easy") pace *= 0.94;
-  if (playerDifficulty().id === "hard") pace = Math.min(1, pace + 0.06);
+  if (playerDifficulty().id === "hard") pace = Math.min(1.08, pace + 0.06);
   // Live balance tuner softens/hardens the mid-run spike from analytics.
   const tuned = Number(state.tuning?.hunterSpeed);
   if (Number.isFinite(tuned) && tuned > 0) {
@@ -2315,7 +2365,7 @@ function midgamePace() {
   }
   const hungerTune = Number(state.tuning?.hungerDrain);
   if (Number.isFinite(hungerTune) && hungerTune > 1.02) {
-    pace = Math.min(1, pace + 0.03);
+    pace = Math.min(1.08, pace + 0.03);
   }
   return pace;
 }
@@ -2372,7 +2422,7 @@ function waveNumber(wave = waveForScore()) {
 function updateWaveUi(flash = false) {
   if (!waveLabelEl) return;
   if (state.event?.title) {
-    setEventChip(`событие · ${state.event.title}`);
+    setEventChip(`${tr("event_chip", "событие")} · ${state.event.title}`);
     return;
   }
   const wave = waveForScore();
@@ -2493,6 +2543,7 @@ function grantBossClear(id) {
     size: 18,
   });
   showCombo(`${kind === "kraken" ? "КРАКЕН" : "ЛЕВИАФАН"} ПРОЙДЕН · +${reward}`, true);
+  sfxBossClear(kind);
   goalChime();
   saveMeta();
 }
@@ -2982,6 +3033,26 @@ function loadMeta() {
           samples: raw.lastReplay.samples.filter((sample) => Array.isArray(sample) && sample.length === 3).slice(0, 96),
         }
       : null,
+    bestReplay: raw?.bestReplay && Array.isArray(raw.bestReplay.path)
+      ? {
+          score: Math.max(0, Number(raw.bestReplay.score || 0)),
+          hero: typeof raw.bestReplay.hero === "string" ? raw.bestReplay.hero : "octopus",
+          path: raw.bestReplay.path
+            .filter((p) => p && typeof p.x === "number" && typeof p.y === "number")
+            .slice(-60),
+        }
+      : null,
+    localDayBoard: Array.isArray(raw?.localDayBoard)
+      ? raw.localDayBoard
+          .filter((row) => row && typeof row.score === "number")
+          .slice(0, 10)
+          .map((row) => ({
+            day: typeof row.day === "string" ? row.day : "",
+            score: Math.max(0, Number(row.score || 0)),
+            hero: typeof row.hero === "string" ? row.hero : "",
+            at: Math.max(0, Number(row.at || 0)),
+          }))
+      : [],
     seasonalUnlocks: Array.isArray(raw?.seasonalUnlocks)
       ? raw.seasonalUnlocks.filter((id) => typeof id === "string")
       : [],
@@ -3958,7 +4029,7 @@ function refreshDaily() {
 
 function updateEconomyLabels() {
   if (!state.meta) return;
-  if (marksStartEl) marksStartEl.textContent = `${state.meta.marks || 0} следов`;
+  if (marksStartEl) marksStartEl.textContent = `${state.meta.marks || 0} ${tr("marks_label", "следов")}`;
   const streakText = `${Math.max(0, state.meta.streak || 0)} дн`;
   if (streakStartEl) streakStartEl.textContent = streakText;
   if (streakOverEl) streakOverEl.textContent = String(Math.max(0, state.meta.streak || 0));
@@ -4051,7 +4122,7 @@ function claimAllReadyGifts() {
   if (total <= 0) return;
   goalChime();
   buzz([10, 18, 10]);
-  showToast(`подарки · +${total} следов`);
+  showToast(`${tr("gifts", "подарки")} · +${total} ${tr("marks_label", "следов")}`);
   renderGifts();
   updateEconomyLabels();
 }
@@ -4083,7 +4154,7 @@ function renderGifts() {
     all.type = "button";
     all.className = "gift-tile ready gift-all";
     all.innerHTML = `
-      <span class="gift-tile-title">Забрать все</span>
+      <span class="gift-tile-title">${tr("claim_all", "Забрать все")}</span>
       <span class="gift-tile-meta">${readyGifts.length}</span>
     `;
     all.addEventListener("click", () => claimAllReadyGifts());
@@ -4098,7 +4169,10 @@ function renderGifts() {
       <span class="gift-tile-title">${gift.title}</span>
       <span class="gift-tile-meta">${amountText}</span>
     `;
-    btn.setAttribute("aria-label", `Забрать подарок ${gift.title} ${amountText}`);
+    btn.setAttribute("aria-label", trf("daily_gift_cta", "Забрать подарок {title} {amount}", {
+      title: gift.title,
+      amount: amountText,
+    }));
     btn.addEventListener("click", () => claimGift(gift.id));
     list.appendChild(btn);
   }
@@ -4106,13 +4180,140 @@ function renderGifts() {
     const next = readyGifts.length ? null : nextGiftWait(now);
     if (next) {
       nextEl.classList.remove("hidden");
-      nextEl.textContent = `Подарок через ${formatWait(next.wait)}`;
+      nextEl.textContent = trf("gift_next", "Подарок через {time}", { time: formatWait(next.wait) });
     } else {
       nextEl.classList.add("hidden");
       nextEl.textContent = "";
     }
   }
+  updateGiftCta(readyGifts, now);
   updateEconomyLabels();
+}
+
+function updateGiftCta(readyGifts, now = Date.now()) {
+  const cta = document.getElementById("gift-cta");
+  const titleEl = document.getElementById("gift-cta-title");
+  const metaEl = document.getElementById("gift-cta-meta");
+  if (!cta || !state.meta) return;
+  const daily = GIFTS.find((g) => g.id === "daily");
+  const dailyReady = daily && giftReady(daily, now);
+  const ready = readyGifts || GIFTS.filter((gift) => giftReady(gift, now));
+  if (ready.length) {
+    cta.classList.remove("hidden");
+    cta.classList.add("ready");
+    if (titleEl) titleEl.textContent = dailyReady
+      ? tr("daily_gift", "Ежедневный подарок")
+      : tr("gift_ready", "Подарок готов");
+    if (metaEl) {
+      const amount = dailyReady
+        ? (daily.amountLabel?.(state.meta, now) || `+${daily.amount}`)
+        : `×${ready.length}`;
+      metaEl.textContent = amount;
+    }
+    cta.onclick = () => {
+      if (dailyReady) claimGift("daily");
+      else if (ready.length > 1) claimAllReadyGifts();
+      else claimGift(ready[0].id);
+      document.getElementById("menu-gifts")?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    };
+    return;
+  }
+  const next = nextGiftWait(now);
+  if (next) {
+    cta.classList.remove("hidden", "ready");
+    if (titleEl) titleEl.textContent = tr("gifts", "Подарки");
+    if (metaEl) metaEl.textContent = trf("gift_next", "через {time}", { time: formatWait(next.wait) });
+    cta.onclick = () => document.getElementById("menu-gifts")?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    return;
+  }
+  cta.classList.add("hidden");
+  cta.onclick = null;
+}
+
+function recordLocalDayScore(score, heroId) {
+  if (!state.meta || !score) return;
+  const day = localDayKey();
+  const board = Array.isArray(state.meta.localDayBoard) ? state.meta.localDayBoard.slice() : [];
+  const filtered = board.filter((row) => row.day === day || !row.day);
+  filtered.push({ day, score, hero: heroId || "", at: Date.now() });
+  filtered.sort((a, b) => b.score - a.score || a.at - b.at);
+  state.meta.localDayBoard = filtered.slice(0, 8).map((row) => ({ ...row, day }));
+}
+
+function renderLocalBoard() {
+  const list = document.getElementById("local-leaderboard");
+  const help = document.getElementById("local-board-help");
+  if (!list || !state.meta) return;
+  const day = localDayKey();
+  const rows = (state.meta.localDayBoard || []).filter((row) => row.day === day || !row.day).slice(0, 5);
+  list.textContent = "";
+  if (!rows.length) {
+    const li = document.createElement("li");
+    li.textContent = tr("leaderboard_empty", "В рейтинге пока никого нет");
+    list.appendChild(li);
+  } else {
+    rows.forEach((row, i) => {
+      const li = document.createElement("li");
+      const hero = HEROES.find((h) => h.id === row.hero)?.name || "";
+      li.textContent = `${i + 1}. ${row.score}${hero ? ` · ${hero}` : ""}`;
+      list.appendChild(li);
+    });
+  }
+  if (help) help.textContent = tr("local_board_help", "Лучшие результаты на этом устройстве.");
+}
+
+function playBestReplay() {
+  const wrap = document.getElementById("best-replay-wrap");
+  const canvasEl = document.getElementById("best-replay-canvas");
+  const replay = state.meta?.bestReplay;
+  if (!wrap || !canvasEl || !replay?.path?.length) {
+    wrap?.classList.add("hidden");
+    return;
+  }
+  wrap.classList.remove("hidden");
+  const ctx2 = canvasEl.getContext("2d");
+  if (!ctx2) return;
+  const path = replay.path;
+  const w = canvasEl.width;
+  const h = canvasEl.height;
+  let i = 0;
+  const drawFrame = () => {
+    ctx2.clearRect(0, 0, w, h);
+    const g = ctx2.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#0c2248");
+    g.addColorStop(1, "#040c1c");
+    ctx2.fillStyle = g;
+    ctx2.fillRect(0, 0, w, h);
+    ctx2.strokeStyle = "rgba(122,255,212,0.85)";
+    ctx2.lineWidth = 3;
+    ctx2.lineJoin = "round";
+    ctx2.beginPath();
+    for (let p = 0; p <= i && p < path.length; p += 1) {
+      const x = path[p].x * w;
+      const y = path[p].y * h;
+      if (p === 0) ctx2.moveTo(x, y);
+      else ctx2.lineTo(x, y);
+    }
+    ctx2.stroke();
+    const cur = path[Math.min(i, path.length - 1)];
+    ctx2.fillStyle = "#7affd4";
+    ctx2.beginPath();
+    ctx2.arc(cur.x * w, cur.y * h, 7, 0, Math.PI * 2);
+    ctx2.fill();
+    ctx2.fillStyle = "rgba(255,255,255,0.75)";
+    ctx2.font = "600 14px Instrument Sans, sans-serif";
+    ctx2.fillText(`${tr("best_score", "Рекорд")} · ${replay.score}`, 14, 22);
+    i += 1;
+    if (i < path.length) requestAnimationFrame(drawFrame);
+  };
+  i = 0;
+  requestAnimationFrame(drawFrame);
+}
+
+function refreshBestReplayUi() {
+  const wrap = document.getElementById("best-replay-wrap");
+  const has = !!state.meta?.bestReplay?.path?.length;
+  wrap?.classList.toggle("hidden", !has);
 }
 
 function renderWeekly() {
@@ -4227,6 +4428,7 @@ function applyContentBiome() {
     app.style.removeProperty("--accent-a");
     app.style.removeProperty("--danger");
   }
+  setGameplayAmbience(biome.ambience || "reef");
   refreshCssCache();
 }
 
@@ -5051,35 +5253,36 @@ function renderDailyResult() {
 
 function renderNextGoal() {
   if (!nextGoalEl || !state.meta) return;
+  const prefix = tr("next_goal", "следующая цель");
   const daily = currentDailyDef();
   if (daily && !state.meta.dailyDone) {
-    nextGoalEl.textContent = `следующая цель · ${daily.title}: ${daily.label(state)}`;
+    nextGoalEl.textContent = `${prefix} · ${daily.title}: ${daily.label(state)}`;
     return;
   }
   if (!state.meta.weekRewardTaken) {
     const quest = currentWeeklyDef();
     const progress = Math.min(quest.target, state.meta.weekProgress || 0);
-    nextGoalEl.textContent = `следующая цель · ${quest.title}: ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
+    nextGoalEl.textContent = `${prefix} · ${quest.title}: ${progress}/${quest.target} ${quest.unit} · +${WEEKLY_REWARD}`;
     return;
   }
   const skin = nextScoreSkinGoal();
   if (skin) {
-    nextGoalEl.textContent = `следующая цель · оттиск «${skin.name}»: рекорд ${state.meta.best || 0}/${skin.at}`;
+    nextGoalEl.textContent = `${prefix} · оттиск «${skin.name}»: ${tr("record", "рекорд")} ${state.meta.best || 0}/${skin.at}`;
     return;
   }
   const hero = nextLockedPremiumHero();
   if (hero) {
     const have = Math.min(state.meta.marks || 0, hero.cost);
-    nextGoalEl.textContent = `следующая цель · герой «${hero.name}»: ${have}/${hero.cost} следов`;
+    nextGoalEl.textContent = `${prefix} · герой «${hero.name}»: ${have}/${hero.cost} ${tr("marks_label", "следов")}`;
     return;
   }
   const pearl = SKINS.find((s) => s.id === "pearl");
   if (pearl && !isSkinOwned("pearl")) {
     const have = Math.min(state.meta.marks || 0, pearl.cost);
-    nextGoalEl.textContent = `следующая цель · окрас «жемчуг»: ${have}/${pearl.cost} следов`;
+    nextGoalEl.textContent = `${prefix} · окрас «жемчуг»: ${have}/${pearl.cost} ${tr("marks_label", "следов")}`;
     return;
   }
-  nextGoalEl.textContent = "следующая цель · новый рекорд";
+  nextGoalEl.textContent = `${prefix} · ${tr("new_record", "новый рекорд")}`;
 }
 
 function syncMutation() {
@@ -5493,13 +5696,22 @@ function resolveNextStep() {
   const daily = currentDailyDef();
   if (daily && !state.meta.dailyDone) {
     return {
-      title: `Цель · ${daily.title}`,
+      title: `${tr("next_goal", "Цель")} · ${daily.title}`,
       sub: daily.label(state),
       run: () => {
-        state.meta.dailyModeEnabled = true;
-        saveMeta();
-        updateModeToggles();
         hideFlowScreens();
+        screenOverEl.classList.add("hidden");
+        startGame();
+      },
+    };
+  }
+  const skin = nextScoreSkinGoal();
+  if (skin) {
+    const left = Math.max(0, skin.at - (state.meta.best || 0));
+    return {
+      title: `${tr("next_goal", "Цель")} · ${skin.name}`,
+      sub: trf("remaining", "ещё {n} света", { n: left }),
+      run: () => {
         screenOverEl.classList.add("hidden");
         startGame();
       },
@@ -5509,7 +5721,7 @@ function resolveNextStep() {
     const quest = currentWeeklyDef();
     const progress = Math.min(quest.target, state.meta.weekProgress || 0);
     return {
-      title: `Цель · ${quest.title}`,
+      title: `${tr("next_goal", "Цель")} · ${quest.title}`,
       sub: `${progress}/${quest.target} ${quest.unit}`,
       run: () => {
         screenOverEl.classList.add("hidden");
@@ -5531,7 +5743,7 @@ function resolveNextStep() {
   if ((state.meta.ghostScore || 0) >= 20 && state.meta.ghostRaceEnabled !== false) {
     return {
       title: "Гонка с призраком",
-      sub: `лучший след · ${state.meta.ghostScore}`,
+      sub: `${tr("best_path", "лучший след")} · ${state.meta.ghostScore}`,
       run: () => {
         state.meta.ghostRaceEnabled = true;
         saveMeta();
@@ -5542,8 +5754,8 @@ function resolveNextStep() {
     };
   }
   return {
-    title: "Новый рекорд",
-    sub: "ещё один забег",
+    title: tr("new_record", "Новый рекорд"),
+    sub: tr("new_run_sub", "ещё один забег"),
     run: () => {
       screenOverEl.classList.add("hidden");
       startGame();
@@ -5574,7 +5786,7 @@ function renderDeathOffers() {
       ? `ежедневка · +${DAILY_QUEST_REWARD} следов`
       : state.dailyMode
         ? "забег дня · Stories"
-        : "Stories · волна и герой";
+        : tr("share_sub", "Stories · волна и герой");
   }
   box.classList.toggle("hidden", !box.childElementCount);
 }
@@ -5816,6 +6028,14 @@ function finalizeGameOver(reason) {
   if (state.meta) {
     state.meta.runs = Math.max(0, (state.meta.runs || 0) + 1);
     state.meta.lastReplay = runReplay;
+    if (isNewBest && state.pathTrail?.length > 4) {
+      state.meta.bestReplay = {
+        score: state.score,
+        hero: activeHeroId(),
+        path: state.pathTrail.slice(-60),
+      };
+    }
+    recordLocalDayScore(state.score, activeHeroId());
     if (state.tutorialRun) grantStarterGift();
     saveMeta();
   }
@@ -5867,6 +6087,8 @@ function finalizeGameOver(reason) {
   renderDailyResult();
   renderNextGoal();
   renderDeathOffers();
+  refreshBestReplayUi();
+  renderLocalBoard();
   renderTrophyList();
   updateBestLabels();
   updateEconomyLabels();
@@ -6496,6 +6718,8 @@ function resetRun() {
   state.progressionRevives = state.progressionEffects.revives || 0;
   state.replaySamples = [[0, 0, 0]];
   state.replaySampleAcc = 0;
+  state.pathTrail = [];
+  state.pathTrailAcc = 0;
   state.theme = 0;
   state.mutation = MUTATIONS[0];
   state.unlockedMuts = ["spark"];
@@ -6734,6 +6958,7 @@ function goToMenu() {
   renderTrophyList();
   renderDaily();
   renderGifts();
+  renderLocalBoard();
   resetDemo();
   sfxUiTap(0);
 }
@@ -7289,7 +7514,7 @@ function updateHunters(dt) {
   const diff = playerDifficulty();
   const wave = syncWave(true);
   // Fish from the start: only one slow hunter early, then ramp with score.
-  const early = state.elapsed < OPENING_SEC + 8 || state.score < 18;
+  const early = state.elapsed < OPENING_SEC + 8 || state.score < 24;
   const opening = inOpening();
   let maxHunters = early || opening
     ? 1
@@ -7299,10 +7524,11 @@ function updateHunters(dt) {
   state.hunterAcc += dt;
   let interval = (Math.max(1.55, 4.4 - state.score * 0.008) * wave.intervalMul * diff.spawn) / Math.max(0.55, soft);
   interval /= Math.max(0.75, midgamePace());
-  // Mid-game: spawn a bit less often so the field stays readable.
-  if (state.score >= 40 && state.score < 220) interval *= 1.14;
+  // Readable field through early midgame.
+  if (state.score >= 30 && state.score < 60) interval *= 1.12;
+  else if (state.score >= 60 && state.score < 220) interval *= 1.06;
   if (state.runMode === "calm") interval *= 1.65;
-  if (opening) interval = Math.max(interval, 2.8);
+  if (opening) interval = Math.max(interval, 3.8);
   if (!state.slowHunterSeen) interval = Math.max(interval, 1.1);
   const firstHunterAt = 0.45;
   if (wave.boss) {
@@ -7603,6 +7829,16 @@ function updateRun(dt) {
     state.replaySampleAcc = 0;
     recordReplaySample(state.touchActive ? 2 : 0, replayPositionValue());
   }
+  state.pathTrailAcc = (state.pathTrailAcc || 0) + dt;
+  if (state.life && state.pathTrailAcc >= 0.28) {
+    state.pathTrailAcc = 0;
+    state.pathTrail = state.pathTrail || [];
+    state.pathTrail.push({
+      x: state.life.x / Math.max(1, state.width),
+      y: state.life.y / Math.max(1, state.height),
+    });
+    if (state.pathTrail.length > 60) state.pathTrail.shift();
+  }
   state.spawnAcc += dt;
   state.comboClock = Math.max(0, state.comboClock - dt);
   if (state.comboClock <= 0 && state.combo !== 0) {
@@ -7688,7 +7924,7 @@ function updateRun(dt) {
         floatText(state.life.x, state.life.y - 28, "откат готов", cssVar("--gold", "#ffe898"), 14);
       }
     }
-    state.hunger -= HUNGER_DRAIN_PER_SEC * dt * (hasMut("cool") ? 0.7 : 1) * renewalMul * stillPenalty * calmMul * modeHungerMul * diveMul * (inOpening() ? 0.72 : 1) * playerDifficulty().hunger * heroHungerMul() * (state.tuning?.hungerDrain || 1);
+    state.hunger -= HUNGER_DRAIN_PER_SEC * dt * (hasMut("cool") ? 0.7 : 1) * renewalMul * stillPenalty * calmMul * modeHungerMul * diveMul * (inOpening() ? 0.62 : 1) * playerDifficulty().hunger * heroHungerMul() * (state.tuning?.hungerDrain || 1);
     state.hunger = Math.max(0, state.hunger);
   }
   updateHungerUi();
@@ -7705,7 +7941,7 @@ function updateRun(dt) {
   updateParticles(dt);
   const opening = inOpening();
   const targetSparkCount = opening ? 3 : 4 + Math.min(2, Math.floor(state.score / 120));
-  const spawnInterval = (opening ? 1.6 : 0.95) * (state.tuning?.sparkInterval || 1);
+  const spawnInterval = (opening ? 1.4 : 0.95) * (state.tuning?.sparkInterval || 1);
   while (state.spawnAcc >= spawnInterval) {
     state.spawnAcc -= spawnInterval;
     if (state.sparks.length < targetSparkCount) {
@@ -8924,9 +9160,9 @@ function renderCloudStatus(text = "") {
   const configured = !!cloudConfig().apiUrl;
   const linked = !!window.OttiskCloud?.isLinked?.();
   status.textContent = text || (linked
-    ? "подключено · синхронизация активна"
-    : configured ? "сервер настроен · нужен аккаунт" : "не подключено · игра работает офлайн");
-  if (account) account.textContent = linked ? "Отключить" : tr("cloud_setup", "Подключить");
+    ? tr("cloud_connected", "подключено · синхронизация активна")
+    : configured ? tr("cloud_account_required", "сервер настроен · нужен аккаунт") : tr("cloud_disconnected", "не подключено · игра работает офлайн"));
+  if (account) account.textContent = linked ? tr("cloud_disconnect", "Отключить") : tr("cloud_setup", "Подключить");
 }
 
 async function renderSocial() {
@@ -9173,6 +9409,13 @@ function boot() {
     updateDonateThanks();
     renderProgression();
     renderStory();
+    if (typeof renderGifts === "function") renderGifts();
+    if (typeof renderWeekly === "function") renderWeekly();
+    if (typeof renderNextGoal === "function") renderNextGoal();
+    if (typeof renderDeathOffers === "function") renderDeathOffers();
+    if (typeof renderCloudStatus === "function") renderCloudStatus();
+    if (typeof updateEconomyLabels === "function") updateEconomyLabels();
+    if (typeof renderTrophyList === "function") renderTrophyList();
   });
   document.getElementById("btn-shop-starter")?.addEventListener("click", () => {
     purchaseStarterPack().catch(() => showToast("покупка недоступна"));
@@ -9262,6 +9505,9 @@ function boot() {
     requestReview().catch(() => {});
   });
   btnOnboard?.addEventListener("click", () => advanceOnboard());
+  document.getElementById("btn-watch-best")?.addEventListener("click", () => {
+    playBestReplay();
+  });
   document.getElementById("btn-how-to-play")?.addEventListener("click", () => {
     if (!screenOnboardEl) return;
     state.onboardStep = 0;
