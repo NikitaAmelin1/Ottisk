@@ -1268,6 +1268,7 @@ function showHomeMenu() {
   updateModeToggles();
   renderTrophyList();
   syncMenuMusic();
+  maybeShowOnboardTips();
 }
 
 function showHeroPick() {
@@ -1964,7 +1965,17 @@ function showCombo(text, fever = false) {
 }
 
 function setEventChip(text) {
-  if (!text || state.running) return;
+  if (!waveLabelEl) return;
+  if (text) {
+    const label = String(text);
+    uiCache.wave = label;
+    waveLabelEl.textContent = label;
+    waveLabelEl.classList.add("event");
+    return;
+  }
+  waveLabelEl.classList.remove("event");
+  uiCache.wave = "";
+  if (state.running) updateWaveUi(false);
 }
 
 function activeEventId() {
@@ -1973,6 +1984,7 @@ function activeEventId() {
 
 function startRunEvent(def) {
   state.event = { id: def.id, title: def.title, t: def.dur };
+  setEventChip(`событие · ${def.title}`);
   pulseUnlock(cssVar("--gold", "#ffe898"), 0.12);
   tipOnce(`event_${def.id}`, def.title.toUpperCase(), 1600, {
     persist: true,
@@ -2359,9 +2371,14 @@ function waveNumber(wave = waveForScore()) {
 
 function updateWaveUi(flash = false) {
   if (!waveLabelEl) return;
+  if (state.event?.title) {
+    setEventChip(`событие · ${state.event.title}`);
+    return;
+  }
   const wave = waveForScore();
   const number = waveNumber(wave);
   const text = `волна ${number} · ${wave.name}`;
+  waveLabelEl.classList.remove("event");
   if (uiCache.wave !== text) {
     uiCache.wave = text;
     waveLabelEl.textContent = text;
@@ -3160,11 +3177,8 @@ function tryHeroDash(dx, dy, moved) {
     if (manta && !hunter.shadow && hunter.r < 24 && pathD < 28) {
       burst(hunter.x, hunter.y, cssVar("--accent-b", "#7affd4"), 14, 4.5);
       state.hunters.splice(hi, 1);
-      state.score += 6;
-      state.combo += 1;
-      state.comboClock = 2.4;
       sliced += 1;
-      floatText(hunter.x, hunter.y - 16, "+6", cssVar("--accent-b", "#7affd4"), 13);
+      addScore(6, hunter.x, hunter.y - 16, { color: cssVar("--accent-b", "#7affd4") });
       continue;
     }
     if (d > pushR || d < 0.1) continue;
@@ -3179,7 +3193,6 @@ function tryHeroDash(dx, dy, moved) {
     }
   }
   if (manta && nearMiss) state.heroDashCd = Math.max(0.35, state.heroDashCd - 0.55);
-  if (sliced) updateScoreUi(true);
   for (let i = 0; i < (manta ? 28 : 10); i += 1) {
     pushParticle({
       x: state.life.x - nx * i * 4,
@@ -3326,11 +3339,7 @@ function updateShipShots(dt) {
       if (!h.boss && !h.shadow && h.r < 28) {
         burst(h.x, h.y, cssVar("--danger", "#ff6888"), 16, 5);
         state.hunters.splice(j, 1);
-        state.score += 5;
-        state.combo += 1;
-        state.comboClock = 2.2;
-        updateScoreUi(true);
-        floatText(h.x, h.y - 18, "+5", cssVar("--gold", "#ffe898"), 14);
+        addScore(5, h.x, h.y - 18, { color: cssVar("--gold", "#ffe898") });
       } else if (h.boss) {
         h.grace = Math.max(h.grace || 0, 0.55);
         floatText(h.x, h.y - 22, "отпор", cssVar("--gold", "#ffe898"), 13);
@@ -3440,11 +3449,7 @@ function fireEelZap(dt) {
       const idx = state.hunters.indexOf(h);
       if (idx >= 0) {
         state.hunters.splice(idx, 1);
-        state.score += 5;
-        state.combo += 1;
-        state.comboClock = 2.3;
-        updateScoreUi(true);
-        floatText(h.x, h.y - 16, "+5", cssVar("--life", "#7affd4"), 13);
+        addScore(5, h.x, h.y - 16, { color: cssVar("--life", "#7affd4") });
       }
     } else if (!h.boss && h.r < 30) {
       placeHunterOnEdge(h);
@@ -3617,10 +3622,11 @@ function applyWhalePulse(power = 1) {
     hit += 1;
   }
   if (hit) {
-    state.score += hit;
+    addScore(hit, state.life.x, state.life.y - 40, {
+      color: "#9ed4ff",
+      combo: false,
+    });
     state.comboClock = Math.max(state.comboClock, 1.6);
-    updateScoreUi(true);
-    floatText(state.life.x, state.life.y - 40, `+${hit}`, "#9ed4ff", 13);
   }
   burst(state.life.x, state.life.y, "rgba(140,200,255,0.55)", 28, 7);
   state.shake = Math.max(state.shake, hit ? 6 : 2);
@@ -4192,7 +4198,15 @@ function earnProgressionFromBest() {
 
 function contentBiome(score = state.score) {
   const biomes = window.OttiskContent?.DEFAULT_CATALOG?.biomes || [];
-  return biomes.find((biome) => score >= biome.depth[0] && score < biome.depth[1]) || biomes[biomes.length - 1] || null;
+  if (!biomes.length) return null;
+  // Prefer the deepest matching band so overlapping legacy ranges still resolve uniquely.
+  let best = null;
+  for (const biome of biomes) {
+    const lo = biome.depth?.[0] ?? 0;
+    const hi = biome.depth?.[1] ?? Number.POSITIVE_INFINITY;
+    if (score >= lo && score < hi && (!best || lo >= (best.depth?.[0] ?? 0))) best = biome;
+  }
+  return best || biomes[biomes.length - 1] || null;
 }
 
 function storyChapter(score = state.meta?.best || 0) {
@@ -4390,10 +4404,19 @@ function evaluateWeekly(score) {
 }
 
 function grantStarterGift() {
-  if (!state.meta || state.meta.starterGift) return;
+  if (!state.meta || state.meta.starterGift) return false;
   state.meta.starterGift = true;
   awardMarks(STARTER_MARKS, { metaOnly: true });
+  saveMeta();
   showToast(`подарок · +${STARTER_MARKS} следов`);
+  return true;
+}
+
+function maybeShowOnboardTips() {
+  if (!state.meta || state.meta.onboarded) return false;
+  if ((state.meta.runs || 0) <= 0) return false;
+  showOnboard();
+  return true;
 }
 
 function showOnboard() {
@@ -5601,6 +5624,12 @@ function restoreMathRandom() {
   }
 }
 
+function rebindDailyRng() {
+  if (!state.dailyMode || typeof state.rng !== "function") return;
+  if (!state._mathRandom) state._mathRandom = Math.random;
+  Math.random = state.rng;
+}
+
 function beginSeededRun() {
   restoreMathRandom();
   state.dailyMode = !!state.meta?.dailyModeEnabled;
@@ -5617,10 +5646,7 @@ function beginSeededRun() {
     const pack = packApi();
     const seed = pack ? pack.daySeed(localDayKey()) : Date.now();
     state.rng = pack ? pack.mulberry32(seed) : null;
-    if (state.rng) {
-      state._mathRandom = Math.random;
-      Math.random = state.rng;
-    }
+    rebindDailyRng();
     if (state.meta) {
       state.meta.trophyDaily = true;
       saveMeta();
@@ -5790,7 +5816,7 @@ function finalizeGameOver(reason) {
   if (state.meta) {
     state.meta.runs = Math.max(0, (state.meta.runs || 0) + 1);
     state.meta.lastReplay = runReplay;
-    if (state.tutorialRun) state.meta.onboarded = true;
+    if (state.tutorialRun) grantStarterGift();
     saveMeta();
   }
   window.OttiskAnalytics?.track("run_end", {
@@ -6002,6 +6028,7 @@ function grantContinue() {
   state.lastTs = performance.now();
   state.flash = Math.max(state.flash, 0.14);
   burst(state.width * 0.5, state.height * 0.56, cssVar("--life", "#6fd9b0"), 22, 4.8);
+  rebindDailyRng();
   sfxContinue();
   showToast("щит · 3 сек");
   buzz([8, 20, 8]);
@@ -8830,6 +8857,11 @@ function draw() {
 }
 
 function frame(ts) {
+  if (document.hidden) {
+    state.lastTs = ts;
+    requestAnimationFrame(frame);
+    return;
+  }
   const measuredMs = ts - (state.lastTs || ts);
   if (measuredMs > 0) perfMonitor?.sample(measuredMs);
   const rawDt = Math.min(0.033, measuredMs / 1000 || 0.016);
@@ -8848,12 +8880,12 @@ function frame(ts) {
       startGame();
     }
   }
+  const inMenuFlow =
+    screenOnboardEl?.classList.contains("hidden") !== false &&
+    (screenVisible(screenStartEl) || screenVisible(screenHeroEl) || screenVisible(screenDiffEl));
   if (state.running) {
     updateRun(dt);
-  } else if (
-    screenOnboardEl?.classList.contains("hidden") !== false &&
-    (screenVisible(screenStartEl) || screenVisible(screenHeroEl) || screenVisible(screenDiffEl))
-  ) {
+  } else if (inMenuFlow) {
     updateDemo(dt);
     if (screenVisible(screenHeroEl)) {
       portraitSkip = (portraitSkip + 1) % 3;
@@ -8861,6 +8893,17 @@ function frame(ts) {
     }
   } else {
     updateOver(dt);
+  }
+  // Soft throttle when an overlay covers the canvas and nothing animated needs 60fps.
+  const overlayHeavy =
+    !state.running &&
+    !inMenuFlow &&
+    (screenVisible(document.getElementById("screen-donate")) ||
+      screenVisible(document.getElementById("screen-draw")) ||
+      screenVisible(screenOnboardEl));
+  if (overlayHeavy && measuredMs < 48) {
+    requestAnimationFrame(frame);
+    return;
   }
   draw();
   requestAnimationFrame(frame);
@@ -9219,6 +9262,14 @@ function boot() {
     requestReview().catch(() => {});
   });
   btnOnboard?.addEventListener("click", () => advanceOnboard());
+  document.getElementById("btn-how-to-play")?.addEventListener("click", () => {
+    if (!screenOnboardEl) return;
+    state.onboardStep = 0;
+    refreshOnboardUi();
+    hideFlowScreens();
+    screenOnboardEl.classList.remove("hidden");
+    stopMenuMusic();
+  });
   btnSound?.addEventListener("click", () => {
     if (!state.meta) return;
     state.meta.sound = !(state.meta.sound !== false);
@@ -9557,17 +9608,15 @@ function boot() {
     else pauseForBackground();
   });
   updateStartButtonCopy();
-  // Don't block the first session with onboarding — the run itself teaches the hook.
-  if (!state.meta.onboarded && (state.meta.runs || 0) > 0) {
-    showOnboard();
-  } else if (state.meta?.streak > 1) {
+  // First death returns to tips + starter gift; the live tutorial teaches the hook.
+  if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
     setTimeout(() => showToast(`серия · ${state.meta.streak} дн`), 650);
   }
   requestAnimationFrame(frame);
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=81")
+      .register("./sw.js?v=84")
       .then((reg) => reg.update())
       .catch(() => {});
   }

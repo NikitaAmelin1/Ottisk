@@ -243,6 +243,13 @@ body {
   animation: wave-pop 0.55s ease;
 }
 
+.wave-chip.event,
+.wave-label.event {
+  border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+  background: color-mix(in srgb, #3a2810 58%, transparent);
+  color: var(--gold);
+}
+
 @keyframes wave-pop {
   0% { transform: translateY(4px); opacity: 0.2; }
   40% { transform: translateY(0); opacity: 1; }
@@ -578,8 +585,8 @@ body {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 6px 0;
-  min-height: 32px;
+  padding: 10px 4px;
+  min-height: 44px;
   cursor: pointer;
 }
 
@@ -686,6 +693,43 @@ body {
 
 .access-row .menu-toggle {
   font-size: 10px;
+}
+
+.how-to-play {
+  margin-top: 10px;
+  min-height: 44px;
+}
+
+.access-details,
+.advanced-tools {
+  width: min(100%, 360px);
+  margin-top: 10px;
+}
+
+.access-details > summary,
+.advanced-tools > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--foam) 55%, transparent);
+}
+
+.access-details > summary::-webkit-details-marker,
+.advanced-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.foot-advanced {
+  width: auto;
+  margin-top: 0;
+}
+
+.foot-advanced a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
 }
 
 .data-tools {

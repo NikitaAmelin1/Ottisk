@@ -45,6 +45,52 @@ async function bootNative() {
     await p.App?.addListener?.("appStateChange", ({ isActive }) => {
       document.dispatchEvent(new CustomEvent("ottisk-app-state", { detail: { isActive } }));
     });
+    await p.App?.addListener?.("backButton", ({ canGoBack }) => {
+      const over = document.getElementById("screen-over");
+      const cont = document.getElementById("screen-continue");
+      const donate = document.getElementById("screen-donate");
+      const draw = document.getElementById("screen-draw");
+      const onboard = document.getElementById("screen-onboard");
+      const hero = document.getElementById("screen-hero");
+      const diff = document.getElementById("screen-diff");
+      const start = document.getElementById("screen-start");
+      const visible = (el) => el && !el.classList.contains("hidden");
+      if (visible(donate)) {
+        document.getElementById("btn-donate-close")?.click?.();
+        return;
+      }
+      if (visible(draw)) {
+        document.getElementById("btn-draw-cancel")?.click?.();
+        return;
+      }
+      if (visible(onboard)) {
+        onboard.classList.add("hidden");
+        start?.classList.remove("hidden");
+        return;
+      }
+      if (visible(diff)) {
+        document.getElementById("btn-diff-back")?.click?.();
+        return;
+      }
+      if (visible(hero)) {
+        document.getElementById("btn-hero-back")?.click?.();
+        return;
+      }
+      if (visible(cont)) {
+        document.getElementById("btn-skip-continue")?.click?.();
+        return;
+      }
+      if (visible(over)) {
+        document.getElementById("btn-menu")?.click?.();
+        return;
+      }
+      if (document.getElementById("app")?.classList.contains("in-run")) {
+        document.dispatchEvent(new CustomEvent("ottisk-request-pause"));
+        return;
+      }
+      if (canGoBack) window.history.back();
+      else p.App?.exitApp?.();
+    });
   } catch (_) {
     // noop
   }

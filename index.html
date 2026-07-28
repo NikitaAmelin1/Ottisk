@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=83" />
+  <link rel="stylesheet" href="css/style.css?v=84" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -106,14 +106,18 @@
           <button class="menu-toggle run-mode-btn" data-run-mode="calm" type="button" aria-pressed="false" data-i18n="calm">спокойный</button>
         </div>
         <p id="mode-note" class="menu-note quiet">обычный забег</p>
-        <div class="access-row" role="group" aria-label="Доступность">
-          <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
-          <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
-          <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
-          <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
-          <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
-          <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
-        </div>
+        <button id="btn-how-to-play" class="menu-link how-to-play" type="button">Как играть</button>
+        <details class="access-details">
+          <summary class="menu-section-label">Доступность и качество</summary>
+          <div class="access-row" role="group" aria-label="Доступность">
+            <button id="btn-reduce-motion" class="menu-toggle" type="button" aria-pressed="false" data-i18n="less_motion">меньше движения</button>
+            <button id="btn-high-contrast" class="menu-toggle" type="button" aria-pressed="false" data-i18n="contrast">контраст</button>
+            <button id="btn-quality" class="menu-toggle" type="button" aria-pressed="false" data-i18n="quality_auto">качество · авто</button>
+            <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
+            <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
+            <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
+          </div>
+        </details>
       </div>
 
       <div class="menu-more">
@@ -156,18 +160,23 @@
         <section class="data-tools cloud-tools" aria-label="Облачный прогресс">
           <p class="menu-section-label" data-i18n="cloud">Облако и рейтинг</p>
           <p id="cloud-status" class="menu-note quiet">не подключено · игра работает офлайн</p>
-          <label class="cloud-api-label" for="cloud-api-input">
-            <span class="menu-note quiet">URL Worker (Cloudflare)</span>
-            <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
-          </label>
           <div class="data-tools-row">
-            <button id="btn-cloud-api-save" class="menu-link" type="button">Сохранить URL</button>
             <button id="btn-cloud-account" class="menu-link" type="button" data-i18n="cloud_setup">Подключить</button>
             <button id="btn-cloud-sync" class="menu-link" type="button" data-i18n="cloud_sync">Синхронизировать</button>
             <button id="btn-cloud-board" class="menu-link" type="button" data-i18n="leaderboard">Рейтинг дня</button>
           </div>
           <ol id="cloud-leaderboard" class="cloud-leaderboard hidden" aria-live="polite"></ol>
-          <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
+          <details class="advanced-tools">
+            <summary class="menu-note quiet">Расширенные настройки облака</summary>
+            <label class="cloud-api-label" for="cloud-api-input">
+              <span class="menu-note quiet">URL Worker (Cloudflare)</span>
+              <input id="cloud-api-input" class="cloud-api-input" type="url" inputmode="url" autocomplete="off" placeholder="https://ottisk-api.example.workers.dev" />
+            </label>
+            <div class="data-tools-row">
+              <button id="btn-cloud-api-save" class="menu-link" type="button">Сохранить URL</button>
+              <button id="btn-crash-reports" class="menu-toggle" type="button" aria-pressed="false" data-i18n="crashes">отчёты об ошибках</button>
+            </div>
+          </details>
         </section>
 
         <section class="data-tools social-tools" aria-label="Друзья и дуэли">
@@ -189,9 +198,12 @@
             <span class="btn-donate-sub">поддержать игру</span>
           </button>
           <a href="./landing.html" data-i18n="about">О игре</a>
-          <a href="./editor.html">Редактор контента</a>
           <a href="./privacy.html" data-i18n="privacy">Конфиденциальность</a>
           <a href="./support.html" data-i18n="support">Поддержка</a>
+          <details class="advanced-tools foot-advanced">
+            <summary>Для авторов</summary>
+            <a href="./editor.html">Редактор контента</a>
+          </details>
         </nav>
       </div>
 
@@ -413,7 +425,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v83";
+      const stamp = "ottisk-force-v84";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -427,7 +439,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "83");
+      url.searchParams.set("v", "84");
       location.replace(url.toString());
     })();
   </script>
@@ -441,8 +453,8 @@
   <script src="js/perf.js"></script>
   <script src="js/balance-tuner.js"></script>
   <script src="js/pwa.js"></script>
-  <script src="js/creature-art.js?v=83"></script>
+  <script src="js/creature-art.js?v=84"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=83" type="module"></script>
+  <script src="js/game.js?v=84" type="module"></script>
 </body>
 </html>
