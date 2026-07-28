@@ -13,10 +13,22 @@
       ctx = c;
     }
 
+    function fxOn() {
+      return !api.effects || api.effects();
+    }
+
     function softGlow(x, y, r, color, alpha) {
-      const g = ctx.createRadialGradient(x, y, r * 0.15, x, y, r);
-      g.addColorStop(0, mixColor(color, "#ffffff", 0.35));
-      g.addColorStop(0.45, color);
+      if (!fxOn()) {
+        ctx.globalAlpha = alpha * 0.4;
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.15);
+        ctx.beginPath();
+        ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+      const g = ctx.createRadialGradient(x, y, r * 0.12, x, y, r);
+      g.addColorStop(0, mixColor(color, "#ffffff", 0.42));
+      g.addColorStop(0.4, color);
       g.addColorStop(1, "transparent");
       ctx.globalAlpha = alpha;
       ctx.fillStyle = g;
@@ -78,32 +90,42 @@
       const bodyR = r * (1 + Math.sin(pulse) * (kind === "super" ? 0.12 : 0.08));
       ctx.save();
       ctx.translate(x, y);
-      softGlow(0, 0, bodyR * (fancy ? 2.7 : 2.15), color, alpha * (fancy ? 0.38 : 0.26));
+      softGlow(0, 0, bodyR * (fancy ? 3.0 : 2.35), color, alpha * (fancy ? 0.42 : 0.3));
+
+      // soft outer wash
+      ctx.globalAlpha = alpha * 0.22;
+      const wash = ctx.createRadialGradient(0, 0, bodyR * 0.2, 0, 0, bodyR * 1.8);
+      wash.addColorStop(0, mixColor(color, "#ffffff", 0.35));
+      wash.addColorStop(1, "transparent");
+      ctx.fillStyle = wash;
+      ctx.beginPath();
+      ctx.arc(0, 0, bodyR * 1.8, 0, Math.PI * 2);
+      ctx.fill();
 
       // outer petal halo
-      ctx.globalAlpha = alpha * 0.35;
-      ctx.fillStyle = mixColor(color, "#ffffff", 0.2);
+      ctx.globalAlpha = alpha * 0.32;
+      ctx.fillStyle = mixColor(color, "#ffffff", 0.25);
       const petals = kind === "super" ? 10 : kind === "rare" ? 8 : 6;
       for (let i = 0; i < petals; i += 1) {
         const a = (i / petals) * Math.PI * 2 + pulse * 0.35;
-        const pr = bodyR * (1.15 + 0.12 * Math.sin(pulse * 2 + i));
+        const pr = bodyR * (1.18 + 0.14 * Math.sin(pulse * 2 + i));
         ctx.beginPath();
-        ctx.ellipse(Math.cos(a) * pr * 0.55, Math.sin(a) * pr * 0.55, bodyR * 0.28, bodyR * 0.14, a, 0, Math.PI * 2);
+        ctx.ellipse(Math.cos(a) * pr * 0.52, Math.sin(a) * pr * 0.52, bodyR * 0.26, bodyR * 0.13, a, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      const core = ctx.createRadialGradient(-bodyR * 0.25, -bodyR * 0.3, bodyR * 0.05, 0, 0, bodyR);
-      core.addColorStop(0, mixColor(color, "#ffffff", 0.9));
-      core.addColorStop(0.28, mixColor(color, "#ffffff", 0.4));
-      core.addColorStop(0.62, color);
-      core.addColorStop(1, mixColor(color, "#0a1828", 0.5));
+      const core = ctx.createRadialGradient(-bodyR * 0.25, -bodyR * 0.3, bodyR * 0.04, 0, 0, bodyR);
+      core.addColorStop(0, mixColor(color, "#ffffff", 0.95));
+      core.addColorStop(0.22, mixColor(color, "#ffffff", 0.5));
+      core.addColorStop(0.58, color);
+      core.addColorStop(1, mixColor(color, "#0a1828", 0.55));
       ctx.globalAlpha = alpha;
       ctx.fillStyle = core;
       ctx.beginPath();
       const lobes = kind === "super" ? 9 : kind === "rare" ? 7 : 6;
       for (let i = 0; i <= lobes; i += 1) {
         const a = (i / lobes) * Math.PI * 2 + pulse * 0.25;
-        const rad = bodyR * (0.62 + 0.38 * Math.sin(pulse * 1.8 + i * 1.4));
+        const rad = bodyR * (0.66 + 0.34 * Math.sin(pulse * 1.8 + i * 1.4));
         const px = Math.cos(a) * rad;
         const py = Math.sin(a) * rad;
         if (i === 0) ctx.moveTo(px, py);
@@ -113,35 +135,35 @@
       ctx.fill();
 
       // crystal facet web
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.strokeStyle = mixColor(color, "#ffffff", 0.6);
-      ctx.lineWidth = 1.15;
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.strokeStyle = mixColor(color, "#ffffff", 0.65);
+      ctx.lineWidth = 1.2;
       for (let i = 0; i < (fancy ? 5 : 3); i += 1) {
         const a = pulse * 0.55 + i * ((Math.PI * 2) / (fancy ? 5 : 3));
         ctx.beginPath();
-        ctx.moveTo(Math.cos(a + 1.2) * bodyR * 0.2, Math.sin(a + 1.2) * bodyR * 0.2);
+        ctx.moveTo(Math.cos(a + 1.2) * bodyR * 0.18, Math.sin(a + 1.2) * bodyR * 0.18);
         ctx.lineTo(Math.cos(a) * bodyR * 0.72, Math.sin(a) * bodyR * 0.72);
         ctx.stroke();
       }
       ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 0.32, 0, Math.PI * 2);
+      ctx.arc(0, 0, bodyR * 0.3, 0, Math.PI * 2);
       ctx.stroke();
 
       // orbiting motes
       const moteCount = kind === "super" ? 7 : kind === "rare" ? 5 : 3;
       for (let i = 0; i < moteCount; i += 1) {
         const a = pulse * (1.5 + i * 0.12) + (i / moteCount) * Math.PI * 2;
-        const orbit = bodyR * (1.25 + (i % 2) * 0.32);
-        ctx.globalAlpha = alpha * (0.5 + (i % 2) * 0.28);
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.75);
+        const orbit = bodyR * (1.28 + (i % 2) * 0.34);
+        ctx.globalAlpha = alpha * (0.55 + (i % 2) * 0.25);
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.8);
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.3, bodyR * 0.11), 0, Math.PI * 2);
+        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.35, bodyR * 0.12), 0, Math.PI * 2);
         ctx.fill();
       }
 
       if (kind === "super") {
-        ctx.globalAlpha = alpha * 0.7;
-        ctx.strokeStyle = mixColor(color, "#ffffff", 0.4);
+        ctx.globalAlpha = alpha * 0.72;
+        ctx.strokeStyle = mixColor(color, "#ffffff", 0.45);
         ctx.lineWidth = 2;
         const ring = bodyR * (1.5 + Math.sin(pulse * 2) * 0.16);
         ctx.beginPath();
@@ -163,14 +185,14 @@
         }
       }
 
-      ctx.globalAlpha = alpha * 0.95;
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.globalAlpha = alpha * 0.98;
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
       ctx.beginPath();
-      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(1.5, bodyR * 0.22), 0, Math.PI * 2);
+      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(1.6, bodyR * 0.24), 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = alpha * 0.55;
+      ctx.globalAlpha = alpha * 0.5;
       ctx.beginPath();
-      ctx.arc(bodyR * 0.18, bodyR * 0.12, Math.max(1, bodyR * 0.1), 0, Math.PI * 2);
+      ctx.arc(bodyR * 0.2, bodyR * 0.14, Math.max(1, bodyR * 0.1), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -183,27 +205,27 @@
         ctx.save();
         ctx.translate(spark.x, spark.y);
         ctx.rotate(ang);
-        softGlow(-8, 0, r * 2.2, spark.color, 0.35);
-        const trail = ctx.createLinearGradient(-48, 0, 16, 0);
+        softGlow(-8, 0, r * 2.6, spark.color, 0.4);
+        const trail = ctx.createLinearGradient(-58, 0, 18, 0);
         trail.addColorStop(0, "transparent");
-        trail.addColorStop(0.4, mixColor(spark.color, "#ffffff", 0.15));
-        trail.addColorStop(0.75, spark.color);
-        trail.addColorStop(1, "#fff4d8");
+        trail.addColorStop(0.35, mixColor(spark.color, "#ffffff", 0.08));
+        trail.addColorStop(0.7, spark.color);
+        trail.addColorStop(1, mixColor(spark.color, "#fff4d8", 0.55));
         ctx.fillStyle = trail;
         ctx.beginPath();
-        ctx.moveTo(-48, 0);
-        ctx.quadraticCurveTo(-10, -r * 0.55, 12, -r * 0.35);
-        ctx.lineTo(14, 0);
-        ctx.lineTo(12, r * 0.35);
-        ctx.quadraticCurveTo(-10, r * 0.55, -48, 0);
+        ctx.moveTo(-58, 0);
+        ctx.quadraticCurveTo(-12, -r * 0.62, 14, -r * 0.38);
+        ctx.lineTo(16, 0);
+        ctx.lineTo(14, r * 0.38);
+        ctx.quadraticCurveTo(-12, r * 0.62, -58, 0);
         ctx.fill();
-        // spark head crystal
-        ctx.fillStyle = mixColor(spark.color, "#ffffff", 0.55);
+        softGlow(8, 0, r * 1.4, "#fff8e8", 0.35);
+        ctx.fillStyle = mixColor(spark.color, "#ffffff", 0.6);
         ctx.beginPath();
-        ctx.moveTo(16, 0);
-        ctx.lineTo(4, -r * 0.55);
+        ctx.moveTo(18, 0);
+        ctx.lineTo(5, -r * 0.58);
         ctx.lineTo(-2, 0);
-        ctx.lineTo(4, r * 0.55);
+        ctx.lineTo(5, r * 0.58);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -917,20 +939,22 @@
       const aim = Math.atan2(hunter.vy || 0.01, hunter.vx || 0.01);
       const s = hunter.r;
       const kraken = !!hunter.kraken;
-      const body = kraken ? "#2a1840" : "#152838";
+      const maw = !!hunter.maw;
+      const body = kraken ? "#2a1840" : maw ? "#0f2438" : "#152838";
       const accent = hunter.bossPhase === "telegraph" || hunter.bossPhase === "charge"
         ? "#ff6b7a"
         : hunter.bossPhase === "ink_burst"
           ? "#c184ff"
-          : kraken ? "#b48cff" : "#7ec8ff";
+          : hunter.bossPhase === "suck"
+            ? "#6ab0ff"
+            : maw ? "#5aa0d8" : kraken ? "#b48cff" : "#7ec8ff";
       ctx.save();
       ctx.translate(hunter.x, hunter.y);
       ctx.rotate(aim);
-      softGlow(0, 0, s * 2.8, accent, alpha * 0.35);
+      softGlow(0, 0, s * 2.9, accent, alpha * 0.38);
       ctx.globalAlpha = alpha;
 
       if (kraken) {
-        // massive tentacles behind
         ctx.lineCap = "round";
         for (let i = -3; i <= 3; i += 1) {
           if (!i) continue;
@@ -941,10 +965,8 @@
           ctx.moveTo(-s * 0.2, i * s * 0.12);
           ctx.bezierCurveTo(-s * 1.1, i * s * 0.45 + wob, -s * 1.9, i * s * 0.7 - wob, -s * 2.6, i * s * 0.9 + wob * 0.5);
           ctx.stroke();
-          // suckers
           ctx.fillStyle = mixColor(accent, "#401028", 0.3);
           for (let k = 0; k < 3; k += 1) {
-            const t = 0.35 + k * 0.2;
             const x = -s * (0.8 + k * 0.55);
             const y = i * s * (0.25 + k * 0.2) + wob * (0.3 + k * 0.1);
             ctx.beginPath();
@@ -952,6 +974,51 @@
             ctx.fill();
           }
         }
+      }
+
+      if (maw) {
+        // suction disc / open trench mouth silhouette
+        const open = hunter.bossPhase === "suck" ? 1.18 : hunter.bossPhase === "telegraph" ? 1.08 : 1;
+        softGlow(s * 0.55, 0, s * 1.8, accent, alpha * 0.28);
+        ctx.fillStyle = mixColor(body, "#000810", 0.35);
+        ctx.beginPath();
+        ctx.ellipse(s * 0.15, 0, s * 1.15 * open, s * 0.95 * open, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const throat = ctx.createRadialGradient(s * 0.35, 0, s * 0.1, s * 0.45, 0, s * 1.1);
+        throat.addColorStop(0, mixColor(accent, "#ffffff", 0.25));
+        throat.addColorStop(0.35, mixColor(body, accent, 0.45));
+        throat.addColorStop(1, "#050810");
+        ctx.fillStyle = throat;
+        ctx.beginPath();
+        ctx.ellipse(s * 0.4, 0, s * 0.78 * open, s * 0.62 * open, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // jaw plates
+        for (const side of [-1, 1]) {
+          ctx.fillStyle = mixColor(body, accent, 0.25);
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.2, side * s * 0.15);
+          ctx.quadraticCurveTo(s * 0.5, side * s * 1.25 * open, s * 1.35, side * s * 0.35);
+          ctx.quadraticCurveTo(s * 0.7, side * s * 0.55, s * 0.15, side * s * 0.25);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // teeth ring
+        ctx.fillStyle = "#fff4ea";
+        for (let i = 0; i < 10; i += 1) {
+          const a = (i / 10) * Math.PI * 2;
+          const tx = s * 0.4 + Math.cos(a) * s * 0.55 * open;
+          const ty = Math.sin(a) * s * 0.42 * open;
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.lineTo(tx + Math.cos(a) * s * 0.22, ty + Math.sin(a) * s * 0.22);
+          ctx.lineTo(tx + Math.cos(a + 0.2) * s * 0.12, ty + Math.sin(a + 0.2) * s * 0.12);
+          ctx.closePath();
+          ctx.fill();
+        }
+        eye(s * 0.05, -s * 0.42, s * 0.18, { angry: true, iris: "#081018", white: "#d8f0ff", lookX: s * 0.05 });
+        eye(s * 0.05, s * 0.42, s * 0.18, { angry: true, iris: "#081018", white: "#d8f0ff", lookX: s * 0.05 });
+        ctx.restore();
+        return;
       }
 
       // armored serpent segments
@@ -967,7 +1034,6 @@
         ctx.beginPath();
         ctx.ellipse(t, wob, rr * 1.2, rr * 0.75, 0, 0, Math.PI * 2);
         ctx.fill();
-        // plate ridges
         ctx.strokeStyle = "rgba(255,255,255,0.16)";
         ctx.lineWidth = 1.4;
         ctx.beginPath();
@@ -1028,7 +1094,6 @@
         ctx.fill();
       }
       eye(s * 0.55, -s * 0.22, s * 0.22, { angry: true, iris: "#120810", white: "#ffe8e0", lookX: s * 0.08 });
-      // glowing rune marks
       ctx.strokeStyle = mixColor(accent, "#ffffff", 0.45);
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1060,7 +1125,8 @@
       ctx.translate(body.x, body.y);
       ctx.rotate(aim);
       ctx.globalAlpha = alpha;
-      softGlow(0, 0, s * 2.4, accent, 0.22);
+      softGlow(0, 0, s * 2.55, accent, 0.26);
+      softGlow(s * 0.1, -s * 0.1, s * 1.35, mixColor(ink, "#ffffff", 0.35), 0.16);
       // tentacles with suckers
       for (let i = 0; i < 8; i += 1) {
         const side = i < 4 ? -1 : 1;
@@ -1068,8 +1134,12 @@
         const baseY = side * s * (0.16 + rank * 0.2);
         const curl = Math.sin(wob * 1.4 + i * 0.9) * s * 0.48;
         const len = s * (1.65 + rank * 0.12);
-        ctx.strokeStyle = mixColor(ink, accent, 0.15 + rank * 0.05);
-        ctx.lineWidth = Math.max(2.6, s * (0.24 - rank * 0.02));
+        const tent = ctx.createLinearGradient(-s * 0.05, baseY * 0.5, -len, baseY * 0.9 + curl);
+        tent.addColorStop(0, mixColor(ink, "#ffffff", 0.28));
+        tent.addColorStop(0.55, mixColor(ink, accent, 0.18 + rank * 0.04));
+        tent.addColorStop(1, mixColor(ink, "#102028", 0.4));
+        ctx.strokeStyle = tent;
+        ctx.lineWidth = Math.max(2.8, s * (0.26 - rank * 0.02));
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(-s * 0.05, baseY * 0.5);
@@ -1081,19 +1151,25 @@
           const x = -len * t;
           const y = baseY * (0.7 + t * 0.3) + curl * t;
           ctx.beginPath();
-          ctx.arc(x, y, s * 0.06, 0, Math.PI * 2);
+          ctx.arc(x, y, s * 0.065, 0, Math.PI * 2);
           ctx.fill();
         }
       }
-      const mantle = ctx.createRadialGradient(s * 0.1, -s * 0.15, s * 0.1, 0, 0, s);
-      mantle.addColorStop(0, mixColor(ink, "#ffffff", 0.55));
-      mantle.addColorStop(0.45, mixColor(ink, accent, 0.2));
-      mantle.addColorStop(1, mixColor(ink, "#102028", 0.35));
+      const mantle = ctx.createRadialGradient(s * 0.12, -s * 0.18, s * 0.08, 0, 0, s);
+      mantle.addColorStop(0, mixColor(ink, "#ffffff", 0.62));
+      mantle.addColorStop(0.35, mixColor(ink, accent, 0.28));
+      mantle.addColorStop(0.72, mixColor(ink, accent, 0.08));
+      mantle.addColorStop(1, mixColor(ink, "#102028", 0.42));
       ctx.fillStyle = mantle;
       ctx.beginPath();
-      ctx.ellipse(s * 0.08, 0, s * 0.95, s * 0.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.08, 0, s * 0.98, s * 0.82, 0, 0, Math.PI * 2);
       ctx.fill();
-      speckles(6, mixColor(ink, "#ffffff", 0.2), s * 0.07, s * 0.05, s * 0.45);
+      // belly highlight
+      ctx.fillStyle = mixColor(ink, "#ffffff", 0.22);
+      ctx.beginPath();
+      ctx.ellipse(s * 0.12, s * 0.18, s * 0.55, s * 0.28, 0.12, 0, Math.PI);
+      ctx.fill();
+      speckles(7, mixColor(ink, "#ffffff", 0.24), s * 0.07, s * 0.05, s * 0.48);
       heroEyes(s, wob, alpha, -s * 0.05);
       ctx.restore();
     }
