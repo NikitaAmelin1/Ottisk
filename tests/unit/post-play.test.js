@@ -23,7 +23,7 @@ test("trailer page and cache bump exist", () => {
   const trailer = readFileSync(join(root, "trailer.html"), "utf8");
   const sw = readFileSync(join(root, "sw.js"), "utf8");
   assert.match(trailer, /ottisk-ad-ru-15s\.mp4/);
-  assert.match(sw, /ottisk-v88/);
+  assert.match(sw, /ottisk-v\d+/);
   assert.match(sw, /trailer\.html/);
 });
 
