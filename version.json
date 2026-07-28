@@ -1,0 +1,24 @@
+{
+  "android": {
+    "versionCode": 13,
+    "versionName": "1.2.1",
+    "minVersionCode": 12
+  },
+  "ios": {
+    "version": "1.2.1",
+    "minVersion": "1.2.0"
+  },
+  "web": {
+    "version": "1.2.1"
+  },
+  "message": {
+    "ru": "Доступна новая версия ОТТИСК с улучшениями для Google Play.",
+    "en": "A new ОТТИСК version is available with Play Store improvements."
+  },
+  "storeUrl": {
+    "android": "https://play.google.com/store/apps/details?id=com.amelin.ottisk",
+    "ios": "https://apps.apple.com/app/idREPLACE_WITH_NUMERIC_APP_ID",
+    "web": "https://nikitaamelin1.github.io/Ottisk/"
+  },
+  "updatedAt": "2026-07-28"
+}

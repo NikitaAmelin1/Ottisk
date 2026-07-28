@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=84" />
+  <link rel="stylesheet" href="css/style.css?v=87" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -116,6 +116,7 @@
             <button id="btn-large-ui" class="menu-toggle" type="button" aria-pressed="false" data-i18n="large_ui">крупный интерфейс</button>
             <button id="btn-one-hand" class="menu-toggle" type="button" aria-pressed="false" data-i18n="one_hand">одна рука</button>
             <button id="btn-colorblind" class="menu-toggle" type="button" aria-pressed="false" data-i18n="colorblind_mode">цветовая схема</button>
+            <button id="btn-daily-reminder" class="menu-toggle" type="button" aria-pressed="false">напоминание · выкл</button>
           </div>
         </details>
       </div>
@@ -421,11 +422,18 @@
       <p id="mechanic-card-title" class="mechanic-card-title"></p>
       <p id="mechanic-card-body" class="mechanic-card-body"></p>
     </div>
+    <div id="update-banner" class="update-banner hidden" role="status" aria-live="polite">
+      <p id="update-banner-text" class="update-banner-text">Доступна новая версия</p>
+      <div class="update-banner-actions">
+        <button id="update-banner-open" class="menu-link" type="button">Обновить</button>
+        <button id="update-banner-dismiss" class="menu-link" type="button">Позже</button>
+      </div>
+    </div>
     <canvas id="share-canvas" width="720" height="900" class="share-canvas" aria-hidden="true"></canvas>
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v84";
+      const stamp = "ottisk-force-v87";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -439,7 +447,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "84");
+      url.searchParams.set("v", "87");
       location.replace(url.toString());
     })();
   </script>
@@ -453,8 +461,9 @@
   <script src="js/perf.js"></script>
   <script src="js/balance-tuner.js"></script>
   <script src="js/pwa.js"></script>
-  <script src="js/creature-art.js?v=84"></script>
+  <script src="js/play-ops.js"></script>
+  <script src="js/creature-art.js?v=87"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=84" type="module"></script>
+  <script src="js/game.js?v=87" type="module"></script>
 </body>
 </html>
