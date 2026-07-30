@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=92" />
+  <link rel="stylesheet" href="css/style.css?v=93" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -244,6 +244,20 @@
             <div class="data-tools-row">
               <button id="btn-account-manage" class="menu-link" type="button" data-i18n="auth_login">Вход</button>
               <button id="btn-account-logout" class="menu-link hidden" type="button" data-i18n="auth_logout">Выйти</button>
+            </div>
+          </section>
+
+          <section id="admin-gate" class="data-tools admin-tools admin-gate" aria-label="Администратор">
+            <p class="menu-section-label" data-i18n="admin_title">Администратор</p>
+            <p class="menu-note quiet" data-i18n="admin_gate_lead">Введи код оттиск — панель откроется сразу</p>
+            <label class="auth-field admin-code-field" for="admin-code-input">
+              <span data-i18n="admin_code">Код</span>
+              <input id="admin-code-input" name="admin-code" type="text" maxlength="32" autocomplete="off" placeholder="оттиск" />
+            </label>
+            <p id="admin-gate-error" class="auth-error hidden" role="alert"></p>
+            <div class="data-tools-row">
+              <button id="btn-admin-unlock-code" class="menu-link" type="button" data-i18n="admin_unlock_btn">Открыть админку</button>
+              <button id="btn-admin-auth" class="menu-link" type="button" data-i18n="admin_via_auth">Через регистрацию</button>
             </div>
           </section>
 
@@ -550,7 +564,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v92";
+      const stamp = "ottisk-force-v93";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -564,7 +578,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "90");
+      url.searchParams.set("v", "93");
       location.replace(url.toString());
     })();
   </script>

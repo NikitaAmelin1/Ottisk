@@ -1390,18 +1390,20 @@ function authErrorMessage(code) {
 }
 
 function renderAccountUi() {
+  window.OttiskAccount?.syncAdminRole?.();
   const chip = document.getElementById("account-chip");
   const status = document.getElementById("account-status");
   const logoutBtn = document.getElementById("btn-account-logout");
   const manageBtn = document.getElementById("btn-account-manage");
   const adminTools = document.getElementById("admin-tools");
+  const adminGate = document.getElementById("admin-gate");
   const adminGodBtn = document.getElementById("btn-admin-god");
   const session = window.OttiskAccount?.session?.();
-  const admin = !!session?.admin && session?.mode === "user";
+  const admin = !!window.OttiskAccount?.isAdmin?.();
   if (chip) {
     if (!session) chip.textContent = trAuth("account", "аккаунт");
-    else if (session.mode === "guest") chip.textContent = window.OttiskI18n?.locale === "en" ? "guest" : "гость";
     else if (admin) chip.textContent = trAuth("admin_chip", "админ");
+    else if (session.mode === "guest") chip.textContent = window.OttiskI18n?.locale === "en" ? "guest" : "гость";
     else chip.textContent = (session.displayName || session.email || "аккаунт").slice(0, 14);
   }
   if (status) {
@@ -1416,6 +1418,7 @@ function renderAccountUi() {
       : trAuth("auth_register", "Регистрация");
   }
   adminTools?.classList.toggle("hidden", !admin);
+  adminGate?.classList.toggle("hidden", admin);
   if (adminGodBtn && state.meta) {
     adminGodBtn.classList.toggle("on", !!state.meta.adminGod);
     adminGodBtn.setAttribute("aria-pressed", state.meta.adminGod ? "true" : "false");
@@ -1423,10 +1426,31 @@ function renderAccountUi() {
 }
 
 function enterAdminMode() {
+  window.OttiskAccount?.syncAdminRole?.();
   showMoreMenu();
   const panel = document.getElementById("admin-tools");
-  panel?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  panel?.classList.remove("hidden");
+  document.getElementById("admin-gate")?.classList.add("hidden");
+  requestAnimationFrame(() => {
+    panel?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  });
   showToast(trAuth("admin_enter", "режим администратора"));
+}
+
+function submitAdminUnlock() {
+  const input = document.getElementById("admin-code-input");
+  const err = document.getElementById("admin-gate-error");
+  try {
+    window.OttiskAccount.unlockAdmin(input?.value || "");
+    if (input) input.value = "";
+    err?.classList.add("hidden");
+    enterAdminMode();
+  } catch (_) {
+    if (err) {
+      err.textContent = trAuth("admin_code_bad", "Неверный код. Попробуй: оттиск");
+      err.classList.remove("hidden");
+    }
+  }
 }
 
 function adminGrantMarks(amount = 1000) {
@@ -1488,6 +1512,7 @@ async function submitAuthForm(event) {
   if (submit) submit.disabled = true;
   try {
     if (authMode === "login") {
+      try { sessionStorage.setItem("ottisk-enter-admin", "1"); } catch (_) {}
       await window.OttiskAccount.login({ email, password });
       location.reload();
       return;
@@ -10278,6 +10303,21 @@ function boot() {
     sfxUiTap(0);
     showHomeMenu();
   });
+  document.getElementById("btn-admin-unlock-code")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    submitAdminUnlock();
+  });
+  document.getElementById("admin-code-input")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitAdminUnlock();
+    }
+  });
+  document.getElementById("btn-admin-auth")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    showAuthScreen("register");
+    showToast(trAuth("admin_via_auth_hint", "Зарегистрируйся — откроется админка"));
+  });
   document.getElementById("auth-tab-register")?.addEventListener("click", () => setAuthMode("register"));
   document.getElementById("auth-tab-login")?.addEventListener("click", () => setAuthMode("login"));
   document.getElementById("auth-form")?.addEventListener("submit", (event) => {
@@ -10629,7 +10669,15 @@ function boot() {
   if (window.OttiskAccount?.isReady?.()) {
     showHomeMenu();
     maybeSuggestOneHand();
-    if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
+    let openAdmin = false;
+    try {
+      openAdmin = sessionStorage.getItem("ottisk-enter-admin") === "1";
+      if (openAdmin) sessionStorage.removeItem("ottisk-enter-admin");
+    } catch (_) {}
+    window.OttiskAccount?.syncAdminRole?.();
+    if ((openAdmin || window.OttiskAccount?.isAdmin?.()) && openAdmin) {
+      enterAdminMode();
+    } else if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
       setTimeout(() => showToast(`серия · ${state.meta.streak} дн`), 650);
     }
   } else {

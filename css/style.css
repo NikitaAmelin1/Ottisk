@@ -830,6 +830,14 @@ body {
   color: color-mix(in srgb, var(--ember) 78%, var(--foam));
 }
 
+.admin-gate .admin-code-field {
+  margin-top: 10px;
+}
+
+.admin-gate .admin-code-field input {
+  margin-top: 4px;
+}
+
 .cloud-tools {
   margin-top: 12px;
 }

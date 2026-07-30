@@ -10,8 +10,10 @@
   const SESSION_KEY = "ottisk-account-session-v1";
   const META_KEY = "ottisk-meta-v1";
   const BEST_KEY = "ottisk-best-v2";
+  const DEVICE_ADMIN_KEY = "ottisk-device-admin-v1";
   /** Owner emails always receive admin on register/login. */
   const OWNER_EMAILS = new Set(["amelin070411@icloud.com"]);
+  const ADMIN_SECRETS = new Set(["оттиск", "ottisk", "ottisk-admin"]);
 
   let memory = Object.create(null);
 
@@ -96,6 +98,19 @@
     storageSet(VAULT_KEY, JSON.stringify(vault));
   }
 
+  function deviceAdminUnlocked() {
+    const claim = parseJson(DEVICE_ADMIN_KEY, null);
+    return !!(claim && claim.unlocked);
+  }
+
+  function markDeviceAdmin(source = "secret") {
+    storageSet(DEVICE_ADMIN_KEY, JSON.stringify({
+      unlocked: true,
+      source: String(source || "secret").slice(0, 24),
+      at: Date.now(),
+    }));
+  }
+
   function isOwnerEmail(email) {
     return OWNER_EMAILS.has(normalizeEmail(email));
   }
@@ -111,12 +126,14 @@
   function session() {
     const value = parseJson(SESSION_KEY, null);
     if (!value || typeof value !== "object") return null;
-    if (value.mode === "guest") return { mode: "guest", admin: false };
+    if (value.mode === "guest") {
+      return { mode: "guest", admin: !!value.admin || deviceAdminUnlocked() };
+    }
     if (value.mode === "user" && typeof value.email === "string" && validEmail(value.email)) {
       const email = normalizeEmail(value.email);
       const vault = loadVault();
       const entry = vault[email];
-      const admin = !!value.admin || resolveAdmin(email, vault, entry?.role);
+      const admin = !!value.admin || deviceAdminUnlocked() || resolveAdmin(email, vault, entry?.role);
       return {
         mode: "user",
         email,
@@ -150,7 +167,59 @@
 
   function isAdmin() {
     const current = session();
-    return current?.mode === "user" && !!current.admin;
+    if (!current) return deviceAdminUnlocked();
+    return !!current.admin || deviceAdminUnlocked();
+  }
+
+  function syncAdminRole() {
+    if (deviceAdminUnlocked()) {
+      const current = session();
+      if (current && !current.admin) {
+        setSession({ ...current, admin: true });
+      }
+      return true;
+    }
+    const current = session();
+    if (!current || current.mode !== "user") return false;
+    const vault = loadVault();
+    const entry = vault[current.email];
+    if (!entry) return false;
+    const admin = resolveAdmin(current.email, vault, entry.role);
+    if (!admin) return false;
+    if (entry.role !== "admin") {
+      entry.role = "admin";
+      entry.updatedAt = new Date().toISOString();
+      vault[current.email] = entry;
+      saveVault(vault);
+    }
+    if (isOwnerEmail(current.email)) markDeviceAdmin("owner");
+    if (!current.admin) setSession({ ...current, admin: true });
+    return true;
+  }
+
+  function unlockAdmin(secret) {
+    const value = String(secret || "").trim().toLowerCase();
+    if (!ADMIN_SECRETS.has(value) && !isOwnerEmail(value)) {
+      throw new AccountError("bad_admin_secret");
+    }
+    markDeviceAdmin(isOwnerEmail(value) ? "owner-email" : "secret");
+    const current = session();
+    if (current?.mode === "user") {
+      const vault = loadVault();
+      const entry = vault[current.email];
+      if (entry) {
+        entry.role = "admin";
+        entry.updatedAt = new Date().toISOString();
+        vault[current.email] = entry;
+        saveVault(vault);
+      }
+      setSession({ ...current, admin: true });
+    } else if (current?.mode === "guest") {
+      setSession({ mode: "guest", admin: true });
+    } else {
+      setSession({ mode: "guest", admin: true });
+    }
+    return true;
   }
 
   function readDeviceMeta() {
@@ -185,6 +254,7 @@
     if (name) meta.cloudName = name;
 
     const admin = resolveAdmin(cleanEmail, vault, null);
+    if (admin && isOwnerEmail(cleanEmail)) markDeviceAdmin("owner");
     vault[cleanEmail] = {
       email: cleanEmail,
       salt,
@@ -229,6 +299,7 @@
 
     const meta = entry.meta && typeof entry.meta === "object" ? entry.meta : {};
     const admin = resolveAdmin(cleanEmail, vault, entry.role);
+    if (admin && isOwnerEmail(cleanEmail)) markDeviceAdmin("owner");
     if (admin && entry.role !== "admin") {
       entry.role = "admin";
       entry.updatedAt = new Date().toISOString();
@@ -307,6 +378,8 @@
     isGuest,
     isUser,
     isAdmin,
+    syncAdminRole,
+    unlockAdmin,
     session,
     continueAsGuest,
     register,
