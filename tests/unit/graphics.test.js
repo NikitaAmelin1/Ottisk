@@ -6,6 +6,22 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
+test("vivid ocean background uses brighter caustics", () => {
+  const source = readFileSync(join(root, "js/game.js"), "utf8");
+  assert.match(source, /function drawOceanBackground/);
+  assert.match(source, /vivid/);
+  assert.match(source, /bandTints/);
+  assert.match(source, /--life/);
+});
+
+test("food spark colors are saturated", () => {
+  const game = readFileSync(join(root, "js/game.js"), "utf8");
+  const art = readFileSync(join(root, "js/creature-art.js"), "utf8");
+  assert.match(game, /#ffe14a/);
+  assert.match(game, /#3dffc8/);
+  assert.match(art, /softGlow[\s\S]*0\.62/);
+});
+
 test("theme-aware ocean background is cached by palette", () => {
   const source = readFileSync(join(root, "js/game.js"), "utf8");
   assert.match(source, /function drawOceanBackground/);
@@ -26,9 +42,10 @@ test("css chrome follows theme tokens", () => {
   const css = readFileSync(join(root, "css/style.css"), "utf8");
   assert.match(css, /color-mix\(in srgb, var\(--bg1\)/);
   assert.match(css, /\.aura[\s\S]*var\(--accent-b\)/);
+  assert.match(css, /#063a48/);
 });
 
 test("cache bump for graphics polish", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
-  assert.match(sw, /ottisk-v\d+/);
+  assert.match(sw, /ottisk-v94/);
 });

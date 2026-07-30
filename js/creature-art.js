@@ -19,16 +19,17 @@
 
     function softGlow(x, y, r, color, alpha) {
       if (!fxOn()) {
-        ctx.globalAlpha = alpha * 0.4;
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.15);
+        ctx.globalAlpha = alpha * 0.55;
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.35);
         ctx.beginPath();
-        ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+        ctx.arc(x, y, r * 0.48, 0, Math.PI * 2);
         ctx.fill();
         return;
       }
-      const g = ctx.createRadialGradient(x, y, r * 0.12, x, y, r);
-      g.addColorStop(0, mixColor(color, "#ffffff", 0.42));
-      g.addColorStop(0.4, color);
+      const g = ctx.createRadialGradient(x, y, r * 0.08, x, y, r);
+      g.addColorStop(0, mixColor(color, "#ffffff", 0.62));
+      g.addColorStop(0.35, mixColor(color, "#ffffff", 0.18));
+      g.addColorStop(0.7, color);
       g.addColorStop(1, "transparent");
       ctx.globalAlpha = alpha;
       ctx.fillStyle = g;
@@ -90,42 +91,44 @@
       const bodyR = r * (1 + Math.sin(pulse) * (kind === "super" ? 0.12 : 0.08));
       ctx.save();
       ctx.translate(x, y);
-      softGlow(0, 0, bodyR * (fancy ? 3.0 : 2.35), color, alpha * (fancy ? 0.42 : 0.3));
+      softGlow(0, 0, bodyR * (fancy ? 3.6 : 2.9), color, alpha * (fancy ? 0.62 : 0.48));
 
       // soft outer wash
-      ctx.globalAlpha = alpha * 0.22;
-      const wash = ctx.createRadialGradient(0, 0, bodyR * 0.2, 0, 0, bodyR * 1.8);
-      wash.addColorStop(0, mixColor(color, "#ffffff", 0.35));
+      ctx.globalAlpha = alpha * 0.38;
+      const wash = ctx.createRadialGradient(0, 0, bodyR * 0.15, 0, 0, bodyR * 2.1);
+      wash.addColorStop(0, mixColor(color, "#ffffff", 0.55));
+      wash.addColorStop(0.55, mixColor(color, "#ffffff", 0.12));
       wash.addColorStop(1, "transparent");
       ctx.fillStyle = wash;
       ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 1.8, 0, Math.PI * 2);
+      ctx.arc(0, 0, bodyR * 2.1, 0, Math.PI * 2);
       ctx.fill();
 
       // outer petal halo
-      ctx.globalAlpha = alpha * 0.32;
-      ctx.fillStyle = mixColor(color, "#ffffff", 0.25);
+      ctx.globalAlpha = alpha * 0.48;
+      ctx.fillStyle = mixColor(color, "#ffffff", 0.4);
       const petals = kind === "super" ? 10 : kind === "rare" ? 8 : 6;
       for (let i = 0; i < petals; i += 1) {
         const a = (i / petals) * Math.PI * 2 + pulse * 0.35;
-        const pr = bodyR * (1.18 + 0.14 * Math.sin(pulse * 2 + i));
+        const pr = bodyR * (1.22 + 0.16 * Math.sin(pulse * 2 + i));
         ctx.beginPath();
-        ctx.ellipse(Math.cos(a) * pr * 0.52, Math.sin(a) * pr * 0.52, bodyR * 0.26, bodyR * 0.13, a, 0, Math.PI * 2);
+        ctx.ellipse(Math.cos(a) * pr * 0.52, Math.sin(a) * pr * 0.52, bodyR * 0.28, bodyR * 0.14, a, 0, Math.PI * 2);
         ctx.fill();
       }
 
       const core = ctx.createRadialGradient(-bodyR * 0.25, -bodyR * 0.3, bodyR * 0.04, 0, 0, bodyR);
-      core.addColorStop(0, mixColor(color, "#ffffff", 0.95));
-      core.addColorStop(0.22, mixColor(color, "#ffffff", 0.5));
-      core.addColorStop(0.58, color);
-      core.addColorStop(1, mixColor(color, "#0a1828", 0.55));
+      core.addColorStop(0, "#ffffff");
+      core.addColorStop(0.18, mixColor(color, "#ffffff", 0.75));
+      core.addColorStop(0.48, mixColor(color, "#ffffff", 0.2));
+      core.addColorStop(0.78, color);
+      core.addColorStop(1, mixColor(color, "#0a3040", 0.22));
       ctx.globalAlpha = alpha;
       ctx.fillStyle = core;
       ctx.beginPath();
       const lobes = kind === "super" ? 9 : kind === "rare" ? 7 : 6;
       for (let i = 0; i <= lobes; i += 1) {
         const a = (i / lobes) * Math.PI * 2 + pulse * 0.25;
-        const rad = bodyR * (0.66 + 0.34 * Math.sin(pulse * 1.8 + i * 1.4));
+        const rad = bodyR * (0.7 + 0.36 * Math.sin(pulse * 1.8 + i * 1.4));
         const px = Math.cos(a) * rad;
         const py = Math.sin(a) * rad;
         if (i === 0) ctx.moveTo(px, py);
@@ -135,9 +138,9 @@
       ctx.fill();
 
       // crystal facet web
-      ctx.globalAlpha = alpha * 0.55;
-      ctx.strokeStyle = mixColor(color, "#ffffff", 0.65);
-      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = alpha * 0.72;
+      ctx.strokeStyle = mixColor(color, "#ffffff", 0.8);
+      ctx.lineWidth = 1.35;
       for (let i = 0; i < (fancy ? 5 : 3); i += 1) {
         const a = pulse * 0.55 + i * ((Math.PI * 2) / (fancy ? 5 : 3));
         ctx.beginPath();
@@ -150,30 +153,30 @@
       ctx.stroke();
 
       // orbiting motes
-      const moteCount = kind === "super" ? 7 : kind === "rare" ? 5 : 3;
+      const moteCount = kind === "super" ? 7 : kind === "rare" ? 5 : 4;
       for (let i = 0; i < moteCount; i += 1) {
         const a = pulse * (1.5 + i * 0.12) + (i / moteCount) * Math.PI * 2;
-        const orbit = bodyR * (1.28 + (i % 2) * 0.34);
-        ctx.globalAlpha = alpha * (0.55 + (i % 2) * 0.25);
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.8);
+        const orbit = bodyR * (1.32 + (i % 2) * 0.36);
+        ctx.globalAlpha = alpha * (0.7 + (i % 2) * 0.25);
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.88);
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.35, bodyR * 0.12), 0, Math.PI * 2);
+        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.6, bodyR * 0.14), 0, Math.PI * 2);
         ctx.fill();
       }
 
       if (kind === "super") {
-        ctx.globalAlpha = alpha * 0.72;
-        ctx.strokeStyle = mixColor(color, "#ffffff", 0.45);
-        ctx.lineWidth = 2;
-        const ring = bodyR * (1.5 + Math.sin(pulse * 2) * 0.16);
+        ctx.globalAlpha = alpha * 0.82;
+        ctx.strokeStyle = mixColor(color, "#ffffff", 0.55);
+        ctx.lineWidth = 2.2;
+        const ring = bodyR * (1.55 + Math.sin(pulse * 2) * 0.16);
         ctx.beginPath();
         ctx.ellipse(0, 0, ring * 1.15, ring * 0.48, pulse * 0.55, 0, Math.PI * 2);
         ctx.stroke();
         ctx.beginPath();
         ctx.ellipse(0, 0, ring * 0.48, ring * 1.12, -pulse * 0.45, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.globalAlpha = alpha * 0.35;
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.55);
+        ctx.globalAlpha = alpha * 0.45;
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.65);
         for (let i = 0; i < 4; i += 1) {
           const a = pulse + i * (Math.PI / 2);
           ctx.beginPath();
@@ -185,14 +188,14 @@
         }
       }
 
-      ctx.globalAlpha = alpha * 0.98;
-      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(255,255,255,0.98)";
       ctx.beginPath();
-      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(1.6, bodyR * 0.24), 0, Math.PI * 2);
+      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(1.8, bodyR * 0.26), 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = alpha * 0.5;
+      ctx.globalAlpha = alpha * 0.62;
       ctx.beginPath();
-      ctx.arc(bodyR * 0.2, bodyR * 0.14, Math.max(1, bodyR * 0.1), 0, Math.PI * 2);
+      ctx.arc(bodyR * 0.2, bodyR * 0.14, Math.max(1.1, bodyR * 0.12), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

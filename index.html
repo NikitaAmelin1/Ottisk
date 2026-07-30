@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="ОТТИСК" />
-  <meta name="theme-color" content="#031820" />
+  <meta name="theme-color" content="#063a48" />
   <meta name="description" content="ОТТИСК — удерживай палец: существо живёт только в касании." />
   <meta name="ottisk-cloud-api" content="" />
   <link rel="manifest" href="manifest.json" />
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=93" />
+  <link rel="stylesheet" href="css/style.css?v=94" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -564,7 +564,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v93";
+      const stamp = "ottisk-force-v94";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -578,7 +578,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "93");
+      url.searchParams.set("v", "94");
       location.replace(url.toString());
     })();
   </script>
@@ -594,8 +594,8 @@
   <script src="js/balance-tuner.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/play-ops.js"></script>
-  <script src="js/creature-art.js?v=87"></script>
+  <script src="js/creature-art.js?v=94"></script>
   <script src="js/native.js" type="module"></script>
-  <script src="js/game.js?v=87" type="module"></script>
+  <script src="js/game.js?v=94" type="module"></script>
 </body>
 </html>
