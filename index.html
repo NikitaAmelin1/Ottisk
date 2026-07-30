@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="ОТТИСК" />
-  <meta name="theme-color" content="#081830" />
+  <meta name="theme-color" content="#031820" />
   <meta name="description" content="ОТТИСК — удерживай палец: существо живёт только в касании." />
   <meta name="ottisk-cloud-api" content="" />
   <link rel="manifest" href="manifest.json" />
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=87" />
+  <link rel="stylesheet" href="css/style.css?v=91" />
   <link rel="preload" href="assets/fish-evil.png?v=5" as="image" />
   <title>ОТТИСК</title>
 </head>
@@ -58,9 +58,11 @@
     <div id="screen-auth" class="screen screen-auth hidden" aria-labelledby="auth-title">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
+        <div class="menu-veil-caustic"></div>
         <div class="menu-veil-depth"></div>
       </div>
       <div class="auth-shell">
+        <p class="menu-kicker" data-i18n="menu_kicker">одно касание · живой след</p>
         <p class="brand menu-brand auth-brand">ОТТИСК</p>
         <h1 id="auth-title" class="auth-title" data-i18n="auth_title">Сохрани свой след</h1>
         <p class="auth-lead" data-i18n="auth_lead">Аккаунт хранит прогресс, героев и покупки на этом устройстве.</p>
@@ -98,6 +100,7 @@
     <div id="screen-start" class="screen screen-menu hidden">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
+        <div class="menu-veil-caustic"></div>
         <div class="menu-veil-depth"></div>
       </div>
 
@@ -117,6 +120,7 @@
       </header>
 
       <div class="menu-main menu-main-simple">
+        <p class="menu-kicker" data-i18n="menu_kicker">одно касание · живой след</p>
         <p class="brand menu-brand">ОТТИСК</p>
         <p class="menu-lead" data-i18n="hold_lead">Существо живёт только в касании</p>
 
@@ -158,6 +162,7 @@
     <div id="screen-more" class="screen screen-menu screen-more hidden">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
+        <div class="menu-veil-caustic"></div>
         <div class="menu-veil-depth"></div>
       </div>
       <div class="more-shell">
@@ -311,6 +316,7 @@
     <div id="screen-hero" class="screen screen-flow hidden">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
+        <div class="menu-veil-caustic"></div>
         <div class="menu-veil-depth"></div>
       </div>
       <div class="flow-shell">
@@ -333,6 +339,7 @@
     <div id="screen-diff" class="screen screen-flow hidden">
       <div class="menu-veil" aria-hidden="true">
         <div class="menu-veil-light"></div>
+        <div class="menu-veil-caustic"></div>
         <div class="menu-veil-depth"></div>
       </div>
       <div class="flow-shell">
@@ -528,7 +535,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v90";
+      const stamp = "ottisk-force-v91";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {

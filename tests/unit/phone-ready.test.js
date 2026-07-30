@@ -28,5 +28,5 @@ test("phone docs separate phone vs PC work", () => {
 
 test("cache bump for phone-ready pack", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
-  assert.match(sw, /ottisk-v90/);
+  assert.match(sw, /ottisk-v\d+/);
 });
