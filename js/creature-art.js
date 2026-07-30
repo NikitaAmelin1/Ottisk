@@ -86,27 +86,54 @@
     }
 
     /* —— FOOD / LIGHT —— */
+    function foodSilhouette(r, alpha = 1) {
+      ctx.globalAlpha = alpha * 0.62;
+      const ink = ctx.createRadialGradient(0, 0, r * 0.25, 0, 0, r * 1.7);
+      ink.addColorStop(0, "rgba(3, 16, 26, 0.72)");
+      ink.addColorStop(0.45, "rgba(3, 16, 26, 0.4)");
+      ink.addColorStop(1, "transparent");
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function foodRim(pathFn, color, bodyR, alpha = 1) {
+      ctx.globalAlpha = alpha * 0.95;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(4, 18, 28, 0.88)";
+      ctx.lineWidth = Math.max(3.2, bodyR * 0.28);
+      pathFn();
+      ctx.stroke();
+      ctx.strokeStyle = mixColor(color, "#ffffff", 0.82);
+      ctx.lineWidth = Math.max(1.6, bodyR * 0.12);
+      pathFn();
+      ctx.stroke();
+    }
+
     function drawLightOrb(x, y, r, color, pulse, alpha = 1, kind = "normal") {
       const fancy = kind === "super" || kind === "rare";
       const bodyR = r * (1 + Math.sin(pulse) * (kind === "super" ? 0.12 : 0.08));
       ctx.save();
       ctx.translate(x, y);
-      softGlow(0, 0, bodyR * (fancy ? 3.6 : 2.9), color, alpha * (fancy ? 0.62 : 0.48));
+      foodSilhouette(bodyR * 1.15, alpha);
+      softGlow(0, 0, bodyR * (fancy ? 3.2 : 2.55), color, alpha * (fancy ? 0.55 : 0.4));
 
       // soft outer wash
-      ctx.globalAlpha = alpha * 0.38;
-      const wash = ctx.createRadialGradient(0, 0, bodyR * 0.15, 0, 0, bodyR * 2.1);
-      wash.addColorStop(0, mixColor(color, "#ffffff", 0.55));
-      wash.addColorStop(0.55, mixColor(color, "#ffffff", 0.12));
+      ctx.globalAlpha = alpha * 0.42;
+      const wash = ctx.createRadialGradient(0, 0, bodyR * 0.15, 0, 0, bodyR * 2.0);
+      wash.addColorStop(0, mixColor(color, "#ffffff", 0.6));
+      wash.addColorStop(0.55, mixColor(color, "#ffffff", 0.14));
       wash.addColorStop(1, "transparent");
       ctx.fillStyle = wash;
       ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 2.1, 0, Math.PI * 2);
+      ctx.arc(0, 0, bodyR * 2.0, 0, Math.PI * 2);
       ctx.fill();
 
       // outer petal halo
-      ctx.globalAlpha = alpha * 0.48;
-      ctx.fillStyle = mixColor(color, "#ffffff", 0.4);
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.fillStyle = mixColor(color, "#ffffff", 0.45);
       const petals = kind === "super" ? 10 : kind === "rare" ? 8 : 6;
       for (let i = 0; i < petals; i += 1) {
         const a = (i / petals) * Math.PI * 2 + pulse * 0.35;
@@ -116,31 +143,37 @@
         ctx.fill();
       }
 
+      const lobes = kind === "super" ? 9 : kind === "rare" ? 7 : 6;
+      const lobePath = () => {
+        ctx.beginPath();
+        for (let i = 0; i <= lobes; i += 1) {
+          const a = (i / lobes) * Math.PI * 2 + pulse * 0.25;
+          const rad = bodyR * (0.72 + 0.36 * Math.sin(pulse * 1.8 + i * 1.4));
+          const px = Math.cos(a) * rad;
+          const py = Math.sin(a) * rad;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      };
+
+      foodRim(lobePath, color, bodyR, alpha);
+
       const core = ctx.createRadialGradient(-bodyR * 0.25, -bodyR * 0.3, bodyR * 0.04, 0, 0, bodyR);
       core.addColorStop(0, "#ffffff");
-      core.addColorStop(0.18, mixColor(color, "#ffffff", 0.75));
-      core.addColorStop(0.48, mixColor(color, "#ffffff", 0.2));
+      core.addColorStop(0.16, mixColor(color, "#ffffff", 0.82));
+      core.addColorStop(0.45, mixColor(color, "#ffffff", 0.28));
       core.addColorStop(0.78, color);
-      core.addColorStop(1, mixColor(color, "#0a3040", 0.22));
+      core.addColorStop(1, mixColor(color, "#1a0810", 0.35));
       ctx.globalAlpha = alpha;
       ctx.fillStyle = core;
-      ctx.beginPath();
-      const lobes = kind === "super" ? 9 : kind === "rare" ? 7 : 6;
-      for (let i = 0; i <= lobes; i += 1) {
-        const a = (i / lobes) * Math.PI * 2 + pulse * 0.25;
-        const rad = bodyR * (0.7 + 0.36 * Math.sin(pulse * 1.8 + i * 1.4));
-        const px = Math.cos(a) * rad;
-        const py = Math.sin(a) * rad;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
+      lobePath();
       ctx.fill();
 
       // crystal facet web
-      ctx.globalAlpha = alpha * 0.72;
-      ctx.strokeStyle = mixColor(color, "#ffffff", 0.8);
-      ctx.lineWidth = 1.35;
+      ctx.globalAlpha = alpha * 0.8;
+      ctx.strokeStyle = mixColor(color, "#ffffff", 0.88);
+      ctx.lineWidth = 1.45;
       for (let i = 0; i < (fancy ? 5 : 3); i += 1) {
         const a = pulse * 0.55 + i * ((Math.PI * 2) / (fancy ? 5 : 3));
         ctx.beginPath();
@@ -156,18 +189,22 @@
       const moteCount = kind === "super" ? 7 : kind === "rare" ? 5 : 4;
       for (let i = 0; i < moteCount; i += 1) {
         const a = pulse * (1.5 + i * 0.12) + (i / moteCount) * Math.PI * 2;
-        const orbit = bodyR * (1.32 + (i % 2) * 0.36);
-        ctx.globalAlpha = alpha * (0.7 + (i % 2) * 0.25);
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.88);
+        const orbit = bodyR * (1.38 + (i % 2) * 0.36);
+        ctx.globalAlpha = alpha * (0.78 + (i % 2) * 0.2);
+        ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.6, bodyR * 0.14), 0, Math.PI * 2);
+        ctx.arc(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.72, Math.max(1.8, bodyR * 0.15), 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.strokeStyle = "rgba(4, 18, 28, 0.55)";
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
       }
 
       if (kind === "super") {
-        ctx.globalAlpha = alpha * 0.82;
-        ctx.strokeStyle = mixColor(color, "#ffffff", 0.55);
-        ctx.lineWidth = 2.2;
+        ctx.globalAlpha = alpha * 0.88;
+        ctx.strokeStyle = mixColor(color, "#ffffff", 0.6);
+        ctx.lineWidth = 2.4;
         const ring = bodyR * (1.55 + Math.sin(pulse * 2) * 0.16);
         ctx.beginPath();
         ctx.ellipse(0, 0, ring * 1.15, ring * 0.48, pulse * 0.55, 0, Math.PI * 2);
@@ -175,8 +212,8 @@
         ctx.beginPath();
         ctx.ellipse(0, 0, ring * 0.48, ring * 1.12, -pulse * 0.45, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.globalAlpha = alpha * 0.45;
-        ctx.fillStyle = mixColor(color, "#ffffff", 0.65);
+        ctx.globalAlpha = alpha * 0.5;
+        ctx.fillStyle = mixColor(color, "#ffffff", 0.7);
         for (let i = 0; i < 4; i += 1) {
           const a = pulse + i * (Math.PI / 2);
           ctx.beginPath();
@@ -191,11 +228,11 @@
       ctx.globalAlpha = alpha;
       ctx.fillStyle = "rgba(255,255,255,0.98)";
       ctx.beginPath();
-      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(1.8, bodyR * 0.26), 0, Math.PI * 2);
+      ctx.arc(-bodyR * 0.22, -bodyR * 0.28, Math.max(2, bodyR * 0.28), 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = alpha * 0.62;
+      ctx.globalAlpha = alpha * 0.7;
       ctx.beginPath();
-      ctx.arc(bodyR * 0.2, bodyR * 0.14, Math.max(1.1, bodyR * 0.12), 0, Math.PI * 2);
+      ctx.arc(bodyR * 0.2, bodyR * 0.14, Math.max(1.2, bodyR * 0.13), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -203,6 +240,11 @@
     function drawSpark(spark, stateTime = 0) {
       const r = spark.r;
       const p = spark.pulse || 0;
+      // Dark plate so food stays readable on bright water
+      ctx.save();
+      ctx.translate(spark.x, spark.y);
+      foodSilhouette(r * 1.2, 0.9);
+      ctx.restore();
       if (spark.comet) {
         const ang = Math.atan2(spark.vy, spark.vx || 0.001);
         ctx.save();

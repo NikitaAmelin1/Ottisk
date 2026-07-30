@@ -6750,39 +6750,41 @@ async function shareRun() {
 
 function sparkProfile(type) {
   if (type === "super") {
-    return { type, worth: 10, restore: 48, color: "#ff2458", r: rand(14, 17), super: true, form: "pulsar" };
+    return { type, worth: 10, restore: 48, color: "#ff1f5a", r: rand(15, 18), super: true, form: "pulsar" };
   }
   if (type === "rare") {
-    return { type, worth: 3, restore: 35, color: "#ffe14a", r: rand(14, 18), form: "prism" };
+    return { type, worth: 3, restore: 35, color: "#ffe033", r: rand(15, 19), form: "prism" };
   }
   if (type === "cool") {
-    return { type, worth: 1, restore: 25, color: "#4ad8ff", r: rand(12.5, 16), form: "frost" };
+    // Violet, not cyan — stands out on teal water
+    return { type, worth: 1, restore: 25, color: "#b46cff", r: rand(13.5, 17), form: "frost" };
   }
   if (type === "bait") {
-    return { type, worth: 1, restore: 12, color: "#ff4ae0", r: rand(12.5, 16), form: "lure" };
+    return { type, worth: 1, restore: 12, color: "#ff2ec8", r: rand(13.5, 17), form: "lure" };
   }
   if (type === "comet") {
-    return { type, worth: 5, restore: 28, color: "#ffef3a", r: rand(15, 19), comet: true, form: "bolt" };
+    return { type, worth: 5, restore: 28, color: "#ffef28", r: rand(16, 20), comet: true, form: "bolt" };
   }
   if (type === "deep") {
-    return { type, worth: 4, restore: 32, color: "#5ce8ff", r: rand(13.5, 17), form: "abyss" };
+    return { type, worth: 4, restore: 32, color: "#8a5cff", r: rand(14.5, 18), form: "abyss" };
   }
   if (type === "seed") {
-    return { type, worth: 2, restore: 16, color: "#3dff9a", r: rand(13, 16.5), seed: true, form: "seed" };
+    return { type, worth: 2, restore: 16, color: "#c8ff2e", r: rand(14, 17.5), seed: true, form: "seed" };
   }
   if (type === "ember") {
-    return { type, worth: 3, restore: 30, color: "#ff8a3a", r: rand(13, 16), form: "ember" };
+    return { type, worth: 3, restore: 30, color: "#ff7a22", r: rand(14, 17), form: "ember" };
   }
   if (type === "mirror") {
-    return { type, worth: 2, restore: 20, color: "#8cf4ff", r: rand(12, 15), form: "mirror", mirror: true };
+    return { type, worth: 2, restore: 20, color: "#ffd0ff", r: rand(13, 16), form: "mirror", mirror: true };
   }
-  const normals = ["#ffd45a", "#ff9a4a", "#3dffc8", "#5ad0ff", "#ff6ad8", cssVar("--accent-b", "#3dffc8"), cssVar("--gold", "#f4ff6e")];
+  // Warm / hot palette only — avoids melting into lagoon teal
+  const normals = ["#ffd22e", "#ff8a1e", "#ff3d8a", "#ff5a2e", "#ffe84a", "#ff2eb8", "#ffb010"];
   return {
     type: "normal",
     worth: 1,
     restore: 18,
     color: normals[Math.floor(Math.random() * normals.length)],
-    r: rand(12, 16),
+    r: rand(13.5, 17.5),
     form: "plankton",
   };
 }

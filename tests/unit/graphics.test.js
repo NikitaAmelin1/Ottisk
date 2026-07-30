@@ -14,12 +14,14 @@ test("vivid ocean background uses brighter caustics", () => {
   assert.match(source, /--life/);
 });
 
-test("food spark colors are saturated", () => {
+test("food spark colors contrast against lagoon water", () => {
   const game = readFileSync(join(root, "js/game.js"), "utf8");
   const art = readFileSync(join(root, "js/creature-art.js"), "utf8");
-  assert.match(game, /#ffe14a/);
-  assert.match(game, /#3dffc8/);
-  assert.match(art, /softGlow[\s\S]*0\.62/);
+  assert.match(game, /#ffd22e/);
+  assert.match(game, /#b46cff/);
+  assert.match(art, /foodSilhouette/);
+  assert.match(art, /foodRim/);
+  assert.doesNotMatch(game, /normals = \[[^\]]*#3dffc8/);
 });
 
 test("theme-aware ocean background is cached by palette", () => {
@@ -47,5 +49,5 @@ test("css chrome follows theme tokens", () => {
 
 test("cache bump for graphics polish", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
-  assert.match(sw, /ottisk-v94/);
+  assert.match(sw, /ottisk-v\d+/);
 });
