@@ -96,3 +96,12 @@ test("guest session unlocks play without account vault", () => {
   assert.equal(api.isReady(), true);
   assert.equal(api.isAdmin(), false);
 });
+
+test("admin secret unlocks device admin even for guest", () => {
+  const { api } = loadAccount();
+  api.continueAsGuest();
+  assert.equal(api.isAdmin(), false);
+  api.unlockAdmin("оттиск");
+  assert.equal(api.isAdmin(), true);
+  assert.equal(api.session().admin, true);
+});
