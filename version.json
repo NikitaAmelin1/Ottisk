@@ -1,19 +1,19 @@
 {
   "android": {
-    "versionCode": 13,
-    "versionName": "1.2.1",
+    "versionCode": 14,
+    "versionName": "1.2.2",
     "minVersionCode": 12
   },
   "ios": {
-    "version": "1.2.1",
+    "version": "1.2.2",
     "minVersion": "1.2.0"
   },
   "web": {
-    "version": "1.2.1"
+    "version": "1.2.2"
   },
   "message": {
-    "ru": "Обновление для телефона: установка на экран, чеклист проверки и удобный шаринг.",
-    "en": "Phone update: home-screen install, QA checklist, and easier sharing."
+    "ru": "Новое меню: глубокий лагунный цвет, ярче бренд и свежие кнопки.",
+    "en": "New menu: deep lagoon color, stronger brand, refreshed buttons."
   },
   "storeUrl": {
     "android": "https://play.google.com/store/apps/details?id=com.amelin.ottisk",

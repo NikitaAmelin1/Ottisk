@@ -1,19 +1,23 @@
 :root {
-  --bg0: #062840;
-  --bg1: #1a7aa8;
-  --bg2: #0e5078;
-  --foam: #fffdf8;
-  --sand: #e8d0b8;
-  --ember: #ff9a62;
-  --gold: #ffe898;
-  --life: #7affd4;
-  --danger: #ff7898;
-  --mute: #b0a0ac;
-  --panel: #2e2034;
-  --line: rgba(255, 253, 248, 0.22);
-  --glow: rgba(255, 154, 98, 0.48);
-  --accent-a: #ff9a62;
-  --accent-b: #7affd4;
+  /* Deep lagoon imprint — cool abyss + sea-glass light, warm coral spark */
+  --bg0: #031820;
+  --bg1: #0a5f6e;
+  --bg2: #126f72;
+  --foam: #f2fff9;
+  --sand: #b7d8ce;
+  --ember: #ff8558;
+  --gold: #e7ff8a;
+  --life: #2dffc2;
+  --danger: #ff5d78;
+  --mute: #6f9198;
+  --panel: #072832;
+  --line: rgba(242, 255, 249, 0.2);
+  --glow: rgba(45, 255, 194, 0.28);
+  --accent-a: #ff8558;
+  --accent-b: #2dffc2;
+  --ink: #021018;
+  --menu-surface: color-mix(in srgb, var(--panel) 72%, transparent);
+  --menu-ink: var(--foam);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -48,9 +52,10 @@ body {
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--bg1) 55%, transparent), transparent 58%),
-    radial-gradient(90% 50% at 80% 20%, color-mix(in srgb, var(--accent-b) 14%, transparent), transparent 50%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg1) 42%, var(--bg0)) 0%, var(--bg0) 46%, color-mix(in srgb, var(--bg0) 78%, #02060e) 100%);
+    radial-gradient(110% 70% at 12% -8%, color-mix(in srgb, var(--bg1) 48%, transparent), transparent 55%),
+    radial-gradient(90% 55% at 92% 18%, color-mix(in srgb, var(--accent-b) 16%, transparent), transparent 52%),
+    radial-gradient(70% 45% at 50% 110%, color-mix(in srgb, var(--bg2) 28%, transparent), transparent 60%),
+    linear-gradient(168deg, color-mix(in srgb, var(--bg1) 34%, var(--bg0)) 0%, var(--bg0) 42%, color-mix(in srgb, var(--ink) 70%, var(--bg0)) 100%);
   transition: background 0.7s ease, color 0.55s ease;
 }
 
@@ -65,44 +70,52 @@ body {
 }
 
 #app[data-theme="0"] {
-  --bg0: #241828; --bg1: #442840; --bg2: #5a3428;
-  --ember: #ff9a62; --gold: #ffe898; --life: #7affd4; --danger: #ff7898;
-  --panel: #2e2034; --accent-a: #ff9a62; --accent-b: #7affd4;
+  --bg0: #031820; --bg1: #0a5f6e; --bg2: #126f72;
+  --ember: #ff8558; --gold: #e7ff8a; --life: #2dffc2; --danger: #ff5d78;
+  --panel: #072832; --accent-a: #ff8558; --accent-b: #2dffc2;
+  --foam: #f2fff9; --sand: #b7d8ce; --mute: #6f9198;
 }
 #app[data-theme="1"] {
-  --bg0: #102838; --bg1: #205870; --bg2: #186058;
-  --ember: #62e4ff; --gold: #c8fcff; --life: #7affdc; --danger: #ff8ac4;
-  --panel: #183848; --accent-a: #62e4ff; --accent-b: #ff8ac4;
+  --bg0: #041a28; --bg1: #0d6a88; --bg2: #148090;
+  --ember: #56e7ff; --gold: #c8fff4; --life: #4dffd4; --danger: #ff7ab8;
+  --panel: #0a3040; --accent-a: #56e7ff; --accent-b: #4dffd4;
+  --foam: #f0fffc; --sand: #a8d8e0; --mute: #6a98a4;
 }
 #app[data-theme="2"] {
-  --bg0: #341c10; --bg1: #5a3818; --bg2: #6a2818;
-  --ember: #ffb858; --gold: #fff0aa; --life: #ffdc88; --danger: #ff7858;
-  --panel: #3a2418; --accent-a: #ffb858; --accent-b: #fff0aa;
+  --bg0: #1a120c; --bg1: #6a3a18; --bg2: #7a4020;
+  --ember: #ff9a4a; --gold: #ffe08a; --life: #ffd27a; --danger: #ff6a4a;
+  --panel: #2a1a10; --accent-a: #ff9a4a; --accent-b: #ffe08a;
+  --foam: #fff8ee; --sand: #e0c8a8; --mute: #a08870;
 }
 #app[data-theme="3"] {
-  --bg0: #143020; --bg1: #226050; --bg2: #345030;
-  --ember: #62ffb8; --gold: #e0ff8a; --life: #88ffdc; --danger: #ffaa72;
-  --panel: #1e4034; --accent-a: #62ffb8; --accent-b: #e0ff8a;
+  --bg0: #0a1c16; --bg1: #1a6a4e; --bg2: #2a6a3a;
+  --ember: #4dffb0; --gold: #d8ff7a; --life: #6affc8; --danger: #ff9a62;
+  --panel: #0e2e24; --accent-a: #4dffb0; --accent-b: #d8ff7a;
+  --foam: #f2fff8; --sand: #b0d8c0; --mute: #6a9880;
 }
 #app[data-theme="4"] {
-  --bg0: #2a1834; --bg1: #502878; --bg2: #602848;
-  --ember: #ff8aec; --gold: #ffe0f8; --life: #b0e0ff; --danger: #ff7aaa;
-  --panel: #321c3c; --accent-a: #ff8aec; --accent-b: #b0e0ff;
+  --bg0: #120c1c; --bg1: #3a2860; --bg2: #4a2850;
+  --ember: #ff7ad0; --gold: #ffe0f0; --life: #a8d8ff; --danger: #ff6a90;
+  --panel: #1c1430; --accent-a: #ff7ad0; --accent-b: #a8d8ff;
+  --foam: #f8f4ff; --sand: #d0c0e0; --mute: #8a7aa0;
 }
 #app[data-theme="5"] {
-  --bg0: #2c2418; --bg1: #544030; --bg2: #645820;
-  --ember: #ffe858; --gold: #fff8c8; --life: #ecff98; --danger: #ffaa62;
-  --panel: #383020; --accent-a: #ffe858; --accent-b: #ffaa62;
+  --bg0: #18140c; --bg1: #4a3a20; --bg2: #5a4a18;
+  --ember: #ffe04a; --gold: #fff4a8; --life: #e8ff7a; --danger: #ff9a4a;
+  --panel: #282018; --accent-a: #ffe04a; --accent-b: #ff9a4a;
+  --foam: #fffdf0; --sand: #e0d4a8; --mute: #988870;
 }
 #app[data-theme="6"] {
-  --bg0: #071d2c; --bg1: #0d4558; --bg2: #126b70;
-  --ember: #67e8f9; --gold: #d9fffb; --life: #64ffda; --danger: #ff6f91;
-  --panel: #0b3040; --accent-a: #64ffda; --accent-b: #67e8f9;
+  --bg0: #031820; --bg1: #0b5868; --bg2: #148088;
+  --ember: #4ae8f8; --gold: #d4fffa; --life: #3dffc8; --danger: #ff6a88;
+  --panel: #072e38; --accent-a: #3dffc8; --accent-b: #4ae8f8;
+  --foam: #f0fffc; --sand: #a8dce0; --mute: #6a9aa4;
 }
 #app[data-theme="7"] {
-  --bg0: #190c2b; --bg1: #3f1760; --bg2: #70234f;
-  --ember: #ff78bc; --gold: #ffe0a8; --life: #b8a4ff; --danger: #ff5f72;
-  --panel: #30143f; --accent-a: #ff78bc; --accent-b: #b8a4ff;
+  --bg0: #100818; --bg1: #3a1848; --bg2: #582040;
+  --ember: #ff6ab0; --gold: #ffe0a0; --life: #b8a0ff; --danger: #ff5a70;
+  --panel: #221030; --accent-a: #ff6ab0; --accent-b: #b8a0ff;
+  --foam: #faf4ff; --sand: #d8c0e0; --mute: #8a7098;
 }
 
 .stage {
@@ -440,36 +453,69 @@ body {
   overflow-y: auto;
   touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(ellipse 95% 60% at 50% -12%, color-mix(in srgb, var(--life) 18%, transparent), transparent 58%),
+    radial-gradient(ellipse 50% 40% at 100% 60%, color-mix(in srgb, var(--accent-b) 12%, transparent), transparent 55%),
+    linear-gradient(168deg, color-mix(in srgb, var(--bg1) 28%, var(--bg0)) 0%, var(--bg0) 52%, color-mix(in srgb, var(--ink) 55%, var(--bg0)) 100%);
 }
 
 .menu-veil {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
   background:
-    linear-gradient(180deg, rgba(6, 22, 38, 0.28) 0%, rgba(6, 22, 38, 0.12) 38%, rgba(4, 14, 26, 0.78) 72%, rgba(3, 10, 18, 0.92) 100%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--bg0) 22%, transparent) 0%,
+      color-mix(in srgb, var(--bg0) 8%, transparent) 36%,
+      color-mix(in srgb, var(--bg0) 72%, transparent) 74%,
+      color-mix(in srgb, var(--ink) 88%, var(--bg0)) 100%
+    );
 }
 
 .menu-veil-light {
   position: absolute;
-  inset: -15% 8% auto;
-  height: 48%;
-  background: radial-gradient(ellipse at 50% 35%, rgba(255, 220, 150, 0.14), transparent 68%);
-  animation: menu-drift 8s ease-in-out infinite alternate;
+  inset: -18% 4% auto;
+  height: 52%;
+  background:
+    radial-gradient(ellipse at 42% 38%, color-mix(in srgb, var(--life) 28%, transparent), transparent 62%),
+    radial-gradient(ellipse at 68% 28%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 58%);
+  animation: menu-drift 9s ease-in-out infinite alternate;
 }
 
 .menu-veil-depth {
   position: absolute;
   inset: auto 0 0;
-  height: 55%;
+  height: 58%;
   background:
-    radial-gradient(80% 60% at 50% 100%, rgba(40, 140, 160, 0.16), transparent 70%),
-    linear-gradient(180deg, transparent, rgba(2, 10, 18, 0.55));
+    radial-gradient(85% 65% at 50% 100%, color-mix(in srgb, var(--bg1) 32%, transparent), transparent 72%),
+    radial-gradient(40% 30% at 18% 70%, color-mix(in srgb, var(--ember) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--ink) 70%, transparent));
+}
+
+.menu-veil-caustic {
+  position: absolute;
+  inset: -12% -8%;
+  pointer-events: none;
+  opacity: 0.32;
+  background:
+    radial-gradient(ellipse 26% 16% at 28% 42%, color-mix(in srgb, var(--life) 45%, transparent), transparent 70%),
+    radial-gradient(ellipse 20% 14% at 66% 52%, color-mix(in srgb, var(--gold) 26%, transparent), transparent 68%),
+    radial-gradient(ellipse 18% 12% at 48% 30%, color-mix(in srgb, var(--accent-b) 34%, transparent), transparent 70%);
+  filter: blur(26px);
+  mix-blend-mode: screen;
+  animation: menu-caustic 14s ease-in-out infinite alternate;
 }
 
 @keyframes menu-drift {
-  from { transform: translateY(0) scale(1); opacity: 0.85; }
-  to { transform: translateY(14px) scale(1.05); opacity: 1; }
+  from { transform: translateY(0) scale(1); opacity: 0.82; }
+  to { transform: translateY(12px) scale(1.04); opacity: 1; }
+}
+
+@keyframes menu-caustic {
+  from { transform: translate3d(-2%, 1%, 0) rotate(-2deg); opacity: 0.24; }
+  to { transform: translate3d(3%, -2%, 0) rotate(2.5deg); opacity: 0.38; }
 }
 
 .menu-bar,
@@ -486,6 +532,8 @@ body {
   justify-content: space-between;
   gap: 12px;
   min-height: 28px;
+  padding: 6px 0 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
 }
 
 .btn-shop-top {
@@ -500,11 +548,11 @@ body {
   gap: 14px;
   min-height: 64px;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--gold) 42%, transparent);
-  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--life) 38%, transparent);
+  border-radius: 6px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--gold) 22%, transparent), color-mix(in srgb, #10283f 70%, transparent) 55%),
-    color-mix(in srgb, #12324a 88%, transparent);
+    linear-gradient(135deg, color-mix(in srgb, var(--life) 16%, transparent), color-mix(in srgb, var(--panel) 78%, transparent) 58%),
+    color-mix(in srgb, var(--panel) 90%, transparent);
   color: var(--foam);
   text-align: left;
   cursor: pointer;
@@ -528,7 +576,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
-  color: var(--gold);
+  color: color-mix(in srgb, var(--life) 70%, var(--gold));
 }
 
 .btn-shop-top-sub {
@@ -542,13 +590,14 @@ body {
   flex-shrink: 0;
   min-width: 2.4ch;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--life) 32%, transparent);
+  border-radius: 4px;
   font-family: "Syne", sans-serif;
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--gold);
-  background: color-mix(in srgb, #081828 55%, transparent);
+  color: var(--life);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 
 .menu-meta {
@@ -560,14 +609,14 @@ body {
   font-family: "Instrument Sans", sans-serif;
   font-size: 12px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--foam) 55%, transparent);
+  color: color-mix(in srgb, var(--mute) 85%, var(--life));
 }
 
 .menu-meta strong,
 #marks-start {
   font-family: "Syne", sans-serif;
   font-weight: 800;
-  color: var(--foam);
+  color: color-mix(in srgb, var(--foam) 88%, var(--life));
 }
 
 .menu-sep {
@@ -584,19 +633,20 @@ body {
   appearance: none;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--foam) 42%, transparent);
+  color: color-mix(in srgb, var(--mute) 92%, transparent);
   font-family: "Instrument Sans", sans-serif;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 10px 4px;
   min-height: 44px;
   cursor: pointer;
+  transition: color 0.15s ease;
 }
 
 .menu-toggle.on {
-  color: var(--foam);
+  color: color-mix(in srgb, var(--life) 78%, var(--foam));
 }
 
 .menu-main {
@@ -605,6 +655,17 @@ body {
   align-items: flex-start;
   padding: 8px 0 18px;
   animation: menu-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.menu-kicker {
+  margin: 0 0 10px;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--life) 72%, var(--mute));
+  animation: menu-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .menu-brand {
@@ -632,7 +693,7 @@ body {
   font-size: 15px;
   font-weight: 500;
   line-height: 1.35;
-  color: color-mix(in srgb, var(--foam) 72%, #8ec8d8);
+  color: color-mix(in srgb, var(--sand) 78%, var(--life));
   animation: menu-rise 0.7s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -644,7 +705,7 @@ body {
 
 .btn-play {
   min-height: 70px;
-  border-radius: 4px;
+  border-radius: 6px;
   align-items: center;
   text-align: center;
   animation: menu-cta 2.8s ease-in-out infinite;
@@ -827,9 +888,9 @@ body {
 .menu-section-label {
   margin: 0 0 8px;
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--foam) 48%, transparent);
+  color: color-mix(in srgb, var(--life) 55%, var(--mute));
   font-weight: 700;
 }
 
@@ -932,7 +993,7 @@ body {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--foam) 42%, transparent);
+  color: color-mix(in srgb, var(--mute) 92%, transparent);
   font-family: "Instrument Sans", sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -943,8 +1004,8 @@ body {
 }
 
 .control-chip.on {
-  color: var(--foam);
-  background: color-mix(in srgb, var(--foam) 8%, transparent);
+  color: color-mix(in srgb, var(--life) 70%, var(--foam));
+  background: color-mix(in srgb, var(--life) 10%, transparent);
 }
 
 .menu-more {
@@ -1019,7 +1080,7 @@ body {
   align-self: flex-start;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--foam) 55%, transparent);
+  color: color-mix(in srgb, var(--life) 62%, var(--mute));
   font-family: "Instrument Sans", sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -1038,9 +1099,9 @@ body {
   font-family: "Instrument Sans", sans-serif;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--foam) 48%, transparent);
+  color: color-mix(in srgb, var(--life) 58%, var(--mute));
 }
 
 .flow-title {
@@ -1669,8 +1730,8 @@ body {
 }
 
 @keyframes menu-cta {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.06); }
+  0%, 100% { filter: brightness(1); box-shadow: 0 1px 0 color-mix(in srgb, #fff 38%, transparent) inset, 0 12px 28px color-mix(in srgb, var(--life) 22%, transparent); }
+  50% { filter: brightness(1.05); box-shadow: 0 1px 0 color-mix(in srgb, #fff 45%, transparent) inset, 0 14px 34px color-mix(in srgb, var(--life) 34%, transparent); }
 }
 
 @keyframes menu-gift-pulse {
@@ -1972,15 +2033,26 @@ body {
 
 .btn-secondary {
   color: var(--foam);
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--foam) 28%, transparent);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+}
+
+.btn-secondary:hover {
+  border-color: color-mix(in srgb, var(--life) 42%, var(--line));
+  background: color-mix(in srgb, var(--life) 10%, var(--panel));
 }
 
 .btn-ghost {
-  color: var(--sand);
+  color: color-mix(in srgb, var(--sand) 90%, var(--life));
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
   margin-top: 4px;
+}
+
+.btn-ghost:hover {
+  color: var(--foam);
+  border-color: color-mix(in srgb, var(--life) 30%, var(--line));
+  background: color-mix(in srgb, var(--panel) 40%, transparent);
 }
 
 .over-actions {
@@ -2264,10 +2336,17 @@ body {
   letter-spacing: -0.055em;
   line-height: 0.88;
   color: var(--foam);
-  background: linear-gradient(120deg, var(--foam) 20%, var(--gold) 55%, var(--accent-b) 100%);
+  background: linear-gradient(
+    168deg,
+    #f7fffc 8%,
+    color-mix(in srgb, var(--foam) 70%, var(--life)) 42%,
+    color-mix(in srgb, var(--life) 62%, var(--gold)) 78%,
+    color-mix(in srgb, var(--gold) 70%, var(--ember)) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 6px 28px color-mix(in srgb, var(--life) 18%, transparent));
 }
 
 .tagline {
@@ -2298,12 +2377,12 @@ body {
 .btn {
   appearance: none;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 16px 20px 14px;
   font-family: "Syne", sans-serif;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2314,11 +2393,16 @@ body {
 .btn:active { transform: scale(0.985); }
 
 .btn-primary {
-  color: #16131a;
-  background: linear-gradient(135deg, var(--foam) 0%, color-mix(in srgb, var(--gold) 55%, var(--foam)) 100%);
+  color: var(--ink);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--life) 88%, #fff) 0%,
+    color-mix(in srgb, var(--life) 72%, var(--accent-b)) 55%,
+    color-mix(in srgb, var(--gold) 45%, var(--life)) 100%
+  );
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ember) 40%, transparent),
-    0 10px 28px color-mix(in srgb, var(--accent-a) 22%, transparent);
+    0 1px 0 color-mix(in srgb, #fff 38%, transparent) inset,
+    0 12px 28px color-mix(in srgb, var(--life) 26%, transparent);
 }
 
 .btn-main {
@@ -2640,8 +2724,8 @@ body {
   backdrop-filter: none;
 }
 
-#app.reduce-transparency :is(.menu-veil-light, .menu-veil-depth, .aura),
-#app.reduced-transparency :is(.menu-veil-light, .menu-veil-depth, .aura) {
+#app.reduce-transparency :is(.menu-veil-light, .menu-veil-depth, .menu-veil-caustic, .aura),
+#app.reduced-transparency :is(.menu-veil-light, .menu-veil-depth, .menu-veil-caustic, .aura) {
   display: none;
 }
 
@@ -2657,7 +2741,7 @@ body {
     backdrop-filter: none;
   }
 
-  #app :is(.menu-veil-light, .menu-veil-depth, .aura) {
+  #app :is(.menu-veil-light, .menu-veil-depth, .menu-veil-caustic, .aura) {
     display: none;
   }
 }
@@ -2740,6 +2824,9 @@ body {
     calc(18px + var(--safe-top)) 22px
     calc(18px + var(--safe-bottom));
   overflow-y: auto;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -10%, color-mix(in srgb, var(--life) 16%, transparent), transparent 55%),
+    linear-gradient(168deg, color-mix(in srgb, var(--bg1) 24%, var(--bg0)) 0%, var(--bg0) 100%);
 }
 
 .auth-shell,
@@ -2775,7 +2862,7 @@ body {
   font-size: 15px;
   font-weight: 500;
   line-height: 1.35;
-  color: color-mix(in srgb, var(--foam) 72%, #8ec8d8);
+  color: color-mix(in srgb, var(--sand) 78%, var(--life));
 }
 
 .auth-tabs {
@@ -2788,20 +2875,21 @@ body {
 .auth-tab {
   appearance: none;
   min-height: 42px;
-  border: 1px solid color-mix(in srgb, var(--foam) 16%, transparent);
-  border-radius: 4px;
-  background: transparent;
-  color: color-mix(in srgb, var(--foam) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+  color: color-mix(in srgb, var(--mute) 92%, transparent);
   font-family: "Instrument Sans", sans-serif;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .auth-tab.on {
   color: var(--foam);
-  border-color: color-mix(in srgb, var(--life) 45%, transparent);
-  background: color-mix(in srgb, var(--life) 12%, transparent);
+  border-color: color-mix(in srgb, var(--life) 48%, transparent);
+  background: color-mix(in srgb, var(--life) 14%, var(--panel));
 }
 
 .auth-form {
@@ -2820,7 +2908,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--foam) 58%, transparent);
+  color: color-mix(in srgb, var(--mute) 90%, var(--life));
 }
 
 .auth-field input {
@@ -2828,9 +2916,9 @@ body {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--foam) 18%, transparent);
-  border-radius: 4px;
-  background: color-mix(in srgb, #061424 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
   color: var(--foam);
   font-family: "Instrument Sans", sans-serif;
   font-size: 16px;
@@ -2849,7 +2937,7 @@ body {
   font-family: "Instrument Sans", sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #ff8a9a;
+  color: var(--danger);
 }
 
 .auth-guest {
@@ -2891,6 +2979,7 @@ body {
 .menu-home-btn {
   min-height: 64px;
   width: 100%;
+  border-radius: 6px;
 }
 
 .menu-home-btn .btn-main {
@@ -2919,10 +3008,17 @@ body {
 
 .more-shell .flow-back {
   align-self: flex-start;
+  color: color-mix(in srgb, var(--life) 70%, var(--mute));
 }
 
 .more-shell .flow-title {
   margin-top: 8px;
+  text-align: left;
+}
+
+.more-shell .flow-sub {
+  text-align: left;
+  color: color-mix(in srgb, var(--sand) 78%, var(--life));
 }
 
 .more-shell .menu-more {
@@ -2940,7 +3036,7 @@ body {
   margin-top: 16px;
   padding: 12px 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--foam) 12%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   background: transparent;
   color: var(--foam);
   text-align: left;
@@ -2952,7 +3048,7 @@ body {
 }
 
 .gift-cta.ready .gift-cta-title {
-  color: var(--gold);
+  color: color-mix(in srgb, var(--life) 55%, var(--gold));
 }
 
 .gift-cta-title {
@@ -2966,7 +3062,7 @@ body {
   font-family: "Instrument Sans", sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--foam) 64%, transparent);
+  color: color-mix(in srgb, var(--mute) 90%, var(--life));
 }
 
 @media (max-width: 420px) {
@@ -2986,9 +3082,9 @@ body {
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
-  border-radius: 4px;
-  background: color-mix(in srgb, #071422 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--life) 32%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
   color: var(--foam);
   backdrop-filter: blur(8px);
 }
