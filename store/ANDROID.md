@@ -1,7 +1,8 @@
 # Android / Google Play
 
 Проект Android создан через Capacitor 7 в каталоге `android/`.
-Полный чеклист выпуска: [PLAY_CHECKLIST.md](./PLAY_CHECKLIST.md).
+Полный чеклист выпуска: [PLAY_CHECKLIST.md](./PLAY_CHECKLIST.md).  
+С телефона прямо сейчас: [PHONE_NOW.md](./PHONE_NOW.md).
 
 ## Локальная сборка
 

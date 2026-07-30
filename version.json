@@ -12,13 +12,13 @@
     "version": "1.2.1"
   },
   "message": {
-    "ru": "Доступна новая версия ОТТИСК с улучшениями для Google Play.",
-    "en": "A new ОТТИСК version is available with Play Store improvements."
+    "ru": "Обновление для телефона: установка на экран, чеклист проверки и удобный шаринг.",
+    "en": "Phone update: home-screen install, QA checklist, and easier sharing."
   },
   "storeUrl": {
     "android": "https://play.google.com/store/apps/details?id=com.amelin.ottisk",
     "ios": "https://apps.apple.com/app/idREPLACE_WITH_NUMERIC_APP_ID",
     "web": "https://nikitaamelin1.github.io/Ottisk/"
   },
-  "updatedAt": "2026-07-28"
+  "updatedAt": "2026-07-30"
 }
