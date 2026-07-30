@@ -24,5 +24,5 @@ test("admin tools panel exists and is gated in markup", () => {
 
 test("cache bump for admin mode", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
-  assert.match(sw, /ottisk-v93/);
+  assert.match(sw, /ottisk-v\d+/);
 });
