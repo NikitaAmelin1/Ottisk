@@ -816,6 +816,20 @@ body {
   color: var(--gold);
 }
 
+.admin-tools {
+  border-top-color: color-mix(in srgb, var(--ember) 32%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--ember) 18%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ember) 8%, transparent), transparent 80%);
+}
+
+.admin-tools .menu-section-label {
+  color: color-mix(in srgb, var(--ember) 72%, var(--life));
+}
+
+.admin-tools .menu-link {
+  color: color-mix(in srgb, var(--ember) 78%, var(--foam));
+}
+
 .cloud-tools {
   margin-top: 12px;
 }

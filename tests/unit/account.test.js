@@ -61,9 +61,38 @@ test("local account register and login preserve meta and purchases", async () =>
   assert.equal(meta.starterPackBought, true);
 });
 
+test("owner email and first account become admin on register", async () => {
+  const { api } = loadAccount();
+  const first = await api.register({ email: "player@example.com", password: "secret12", displayName: "Первый" });
+  assert.equal(first.admin, true);
+  assert.equal(api.isAdmin(), true);
+  assert.equal(api.session().admin, true);
+  api.logout();
+
+  const second = await api.register({ email: "other@example.com", password: "secret12" });
+  assert.equal(second.admin, false);
+  assert.equal(api.isAdmin(), false);
+  api.logout();
+
+  const owner = await api.register({ email: "Amelin070411@icloud.com", password: "secret12", displayName: "Никита" });
+  assert.equal(owner.admin, true);
+  assert.equal(api.isAdmin(), true);
+});
+
+test("admin role persists across login", async () => {
+  const { api, store } = loadAccount();
+  await api.register({ email: "amelin070411@icloud.com", password: "secret99" });
+  api.logout();
+  store.set("ottisk-meta-v1", JSON.stringify({ best: 0, marks: 0 }));
+  const result = await api.login({ email: "amelin070411@icloud.com", password: "secret99" });
+  assert.equal(result.admin, true);
+  assert.equal(api.isAdmin(), true);
+});
+
 test("guest session unlocks play without account vault", () => {
   const { api } = loadAccount();
   api.continueAsGuest();
   assert.equal(api.isGuest(), true);
   assert.equal(api.isReady(), true);
+  assert.equal(api.isAdmin(), false);
 });

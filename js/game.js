@@ -1394,15 +1394,19 @@ function renderAccountUi() {
   const status = document.getElementById("account-status");
   const logoutBtn = document.getElementById("btn-account-logout");
   const manageBtn = document.getElementById("btn-account-manage");
+  const adminTools = document.getElementById("admin-tools");
+  const adminGodBtn = document.getElementById("btn-admin-god");
   const session = window.OttiskAccount?.session?.();
+  const admin = !!session?.admin && session?.mode === "user";
   if (chip) {
     if (!session) chip.textContent = trAuth("account", "аккаунт");
     else if (session.mode === "guest") chip.textContent = window.OttiskI18n?.locale === "en" ? "guest" : "гость";
+    else if (admin) chip.textContent = trAuth("admin_chip", "админ");
     else chip.textContent = (session.displayName || session.email || "аккаунт").slice(0, 14);
   }
   if (status) {
     status.textContent = session?.mode === "user"
-      ? `${trAuth("auth_user_status", "аккаунт · прогресс и покупки сохранены")}${session.email ? ` · ${session.email}` : ""}`
+      ? `${trAuth("auth_user_status", "аккаунт · прогресс и покупки сохранены")}${session.email ? ` · ${session.email}` : ""}${admin ? ` · ${trAuth("admin_chip", "админ")}` : ""}`
       : trAuth("auth_guest_status", "гость · прогресс только на устройстве");
   }
   logoutBtn?.classList.toggle("hidden", session?.mode !== "user");
@@ -1411,6 +1415,67 @@ function renderAccountUi() {
       ? trAuth("auth_login", "Вход")
       : trAuth("auth_register", "Регистрация");
   }
+  adminTools?.classList.toggle("hidden", !admin);
+  if (adminGodBtn && state.meta) {
+    adminGodBtn.classList.toggle("on", !!state.meta.adminGod);
+    adminGodBtn.setAttribute("aria-pressed", state.meta.adminGod ? "true" : "false");
+  }
+}
+
+function enterAdminMode() {
+  showMoreMenu();
+  const panel = document.getElementById("admin-tools");
+  panel?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  showToast(trAuth("admin_enter", "режим администратора"));
+}
+
+function adminGrantMarks(amount = 1000) {
+  if (!window.OttiskAccount?.isAdmin?.() || !state.meta) return;
+  state.meta.marks = Math.max(0, Number(state.meta.marks || 0)) + amount;
+  saveMeta();
+  updateEconomyLabels();
+  renderAccountUi();
+  showToast(`+${amount}`);
+}
+
+function adminUnlockAll() {
+  if (!window.OttiskAccount?.isAdmin?.() || !state.meta) return;
+  state.meta.unlockedHeroes = HEROES.filter((h) => h.premium && !h.iap).map((h) => h.id);
+  state.meta.iapHeroes = HEROES.filter((h) => h.iap).map((h) => h.id);
+  state.meta.premiumUnlocked = SKINS.filter((s) => s.premium).map((s) => s.id);
+  state.meta.unlockedSkins = [...new Set([
+    ...(state.meta.unlockedSkins || []),
+    ...SKINS.filter((s) => !s.premium).map((s) => s.id),
+  ])];
+  state.meta.seasonalUnlocks = SKINS.filter((s) => s.seasonal).map((s) => s.id);
+  state.meta.unlockedTrails = TRAILS.map((t) => t.id);
+  state.meta.unlockedFrames = FRAMES.map((f) => f.id);
+  state.meta.starterPackBought = true;
+  state.meta.best = Math.max(state.meta.best || 0, 120);
+  if (bestStartEl) bestStartEl.textContent = String(state.meta.best);
+  saveMeta();
+  updateEconomyLabels();
+  renderAccountUi();
+  showToast(trAuth("admin_unlock", "Открыть всё"));
+}
+
+function adminSetBest(value = 999) {
+  if (!window.OttiskAccount?.isAdmin?.() || !state.meta) return;
+  state.meta.best = Math.max(0, Number(value) || 0);
+  if (bestStartEl) bestStartEl.textContent = String(state.meta.best);
+  saveMeta();
+  updateEconomyLabels();
+  showToast(`${trAuth("record", "рекорд")} ${state.meta.best}`);
+}
+
+function adminToggleGod() {
+  if (!window.OttiskAccount?.isAdmin?.() || !state.meta) return;
+  state.meta.adminGod = !state.meta.adminGod;
+  saveMeta();
+  renderAccountUi();
+  showToast(state.meta.adminGod
+    ? trAuth("admin_god_on", "бессмертие вкл")
+    : trAuth("admin_god_off", "бессмертие выкл"));
 }
 
 async function submitAuthForm(event) {
@@ -1427,14 +1492,18 @@ async function submitAuthForm(event) {
       location.reload();
       return;
     }
-    await window.OttiskAccount.register({ email, password, displayName });
+    const created = await window.OttiskAccount.register({ email, password, displayName });
     if (displayName && state.meta) {
       state.meta.cloudName = displayName.slice(0, 24);
       saveMeta();
     }
-    showToast(trAuth("auth_create", "аккаунт создан"));
-    showHomeMenu();
     renderAccountUi();
+    if (created?.admin || window.OttiskAccount?.isAdmin?.()) {
+      enterAdminMode();
+    } else {
+      showToast(trAuth("auth_create", "аккаунт создан"));
+      showHomeMenu();
+    }
   } catch (error) {
     if (err) {
       err.textContent = authErrorMessage(error?.code || error?.message);
@@ -3219,6 +3288,7 @@ function loadMeta() {
     coopEnabled: !!raw?.coopEnabled,
     dailyModeEnabled: !!raw?.dailyModeEnabled,
     ghostRaceEnabled: raw?.ghostRaceEnabled !== false,
+    adminGod: !!raw?.adminGod,
     bossClears: {
       leviathan: Math.max(0, Number(raw?.bossClears?.leviathan || 0)),
       kraken: Math.max(0, Number(raw?.bossClears?.kraken || 0)),
@@ -7112,6 +7182,18 @@ function goToMenu() {
 
 function finishRun(reason) {
   if (!state.running) return;
+  if (state.meta?.adminGod && window.OttiskAccount?.isAdmin?.()) {
+    state.hunger = Math.max(state.hunger, (state.maxHunger || 100) * 0.85);
+    state.safeUntil = performance.now() + 2200;
+    if (!state.life) createLife(state.width * 0.5, state.height * 0.56, { silent: true });
+    for (const hunter of state.hunters) {
+      if (!hunter.boss) placeHunterOnEdge(hunter);
+      hunter.grace = Math.max(hunter.grace || 0, 1.2);
+    }
+    if (state.life) burst(state.life.x, state.life.y, cssVar("--life", "#7affd4"), 18, 4.5);
+    showToast(trAuth("admin_god_on", "бессмертие вкл"));
+    return;
+  }
   if ((state.progressionRevives || 0) > 0) {
     state.progressionRevives -= 1;
     state.hunger = Math.max(state.hunger, (state.maxHunger || 100) * 0.55);
@@ -10170,6 +10252,31 @@ function boot() {
     window.OttiskAccount.logout();
     showAuthScreen("login");
     renderAccountUi();
+  });
+  document.getElementById("btn-admin-marks")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    adminGrantMarks(1000);
+  });
+  document.getElementById("btn-admin-unlock")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    adminUnlockAll();
+  });
+  document.getElementById("btn-admin-best")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    adminSetBest(999);
+  });
+  document.getElementById("btn-admin-god")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    adminToggleGod();
+  });
+  document.getElementById("btn-admin-editor")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    if (!window.OttiskAccount?.isAdmin?.()) return;
+    location.href = "./editor.html";
+  });
+  document.getElementById("btn-admin-home")?.addEventListener("click", () => {
+    sfxUiTap(0);
+    showHomeMenu();
   });
   document.getElementById("auth-tab-register")?.addEventListener("click", () => setAuthMode("register"));
   document.getElementById("auth-tab-login")?.addEventListener("click", () => setAuthMode("login"));

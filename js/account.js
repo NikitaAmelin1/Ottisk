@@ -10,6 +10,8 @@
   const SESSION_KEY = "ottisk-account-session-v1";
   const META_KEY = "ottisk-meta-v1";
   const BEST_KEY = "ottisk-best-v2";
+  /** Owner emails always receive admin on register/login. */
+  const OWNER_EMAILS = new Set(["amelin070411@icloud.com"]);
 
   let memory = Object.create(null);
 
@@ -94,15 +96,32 @@
     storageSet(VAULT_KEY, JSON.stringify(vault));
   }
 
+  function isOwnerEmail(email) {
+    return OWNER_EMAILS.has(normalizeEmail(email));
+  }
+
+  function resolveAdmin(email, vault, existingRole) {
+    if (existingRole === "admin") return true;
+    if (isOwnerEmail(email)) return true;
+    // First account registered on this device becomes admin.
+    const keys = Object.keys(vault || {});
+    return keys.length === 0 || (keys.length === 1 && keys[0] === normalizeEmail(email));
+  }
+
   function session() {
     const value = parseJson(SESSION_KEY, null);
     if (!value || typeof value !== "object") return null;
-    if (value.mode === "guest") return { mode: "guest" };
+    if (value.mode === "guest") return { mode: "guest", admin: false };
     if (value.mode === "user" && typeof value.email === "string" && validEmail(value.email)) {
+      const email = normalizeEmail(value.email);
+      const vault = loadVault();
+      const entry = vault[email];
+      const admin = !!value.admin || resolveAdmin(email, vault, entry?.role);
       return {
         mode: "user",
-        email: normalizeEmail(value.email),
+        email,
         displayName: typeof value.displayName === "string" ? value.displayName.slice(0, 24) : "",
+        admin,
       };
     }
     return null;
@@ -127,6 +146,11 @@
 
   function isUser() {
     return session()?.mode === "user";
+  }
+
+  function isAdmin() {
+    const current = session();
+    return current?.mode === "user" && !!current.admin;
   }
 
   function readDeviceMeta() {
@@ -160,17 +184,19 @@
     const meta = readDeviceMeta() || {};
     if (name) meta.cloudName = name;
 
+    const admin = resolveAdmin(cleanEmail, vault, null);
     vault[cleanEmail] = {
       email: cleanEmail,
       salt,
       passHash,
       displayName: name,
+      role: admin ? "admin" : "user",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       meta,
     };
     saveVault(vault);
-    setSession({ mode: "user", email: cleanEmail, displayName: name });
+    setSession({ mode: "user", email: cleanEmail, displayName: name, admin });
     writeDeviceMeta(meta);
 
     let cloud = null;
@@ -188,7 +214,7 @@
         cloud = { deferred: true };
       }
     }
-    return { email: cleanEmail, displayName: name, cloud };
+    return { email: cleanEmail, displayName: name, cloud, admin };
   }
 
   async function login({ email, password } = {}) {
@@ -202,11 +228,19 @@
     if (passHash !== entry.passHash) throw new AccountError("bad_credentials");
 
     const meta = entry.meta && typeof entry.meta === "object" ? entry.meta : {};
+    const admin = resolveAdmin(cleanEmail, vault, entry.role);
+    if (admin && entry.role !== "admin") {
+      entry.role = "admin";
+      entry.updatedAt = new Date().toISOString();
+      vault[cleanEmail] = entry;
+      saveVault(vault);
+    }
     writeDeviceMeta(meta);
     setSession({
       mode: "user",
       email: cleanEmail,
       displayName: entry.displayName || "",
+      admin,
     });
 
     let cloud = null;
@@ -227,7 +261,7 @@
     } catch (_) {
       cloud = { deferred: true };
     }
-    return { email: cleanEmail, displayName: entry.displayName || "", cloud, reloaded: true };
+    return { email: cleanEmail, displayName: entry.displayName || "", cloud, admin, reloaded: true };
   }
 
   function logout() {
@@ -272,6 +306,7 @@
     isReady,
     isGuest,
     isUser,
+    isAdmin,
     session,
     continueAsGuest,
     register,
@@ -280,5 +315,6 @@
     persistMeta,
     profileLabel,
     AccountError,
+    OWNER_EMAILS: [...OWNER_EMAILS],
   });
 })(globalThis);
