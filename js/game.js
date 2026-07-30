@@ -1331,6 +1331,7 @@ function showMoreMenu() {
   renderAccountUi();
   renderCloudStatus();
   renderLocalLeaderboard();
+  renderPhoneReady();
   syncMenuMusic();
 }
 
@@ -3123,6 +3124,7 @@ function loadMeta() {
     highContrast: !!raw?.highContrast,
     largeUi: !!raw?.largeUi,
     oneHand: ["off", "left", "right"].includes(raw?.oneHand) ? raw.oneHand : "off",
+    oneHandHinted: !!raw?.oneHandHinted,
     colorblind: ["off", "protanopia", "deuteranopia", "tritanopia"].includes(raw?.colorblind) ? raw.colorblind : "off",
     progression: normalizeProgression(raw?.progression),
     seenChapters: Array.isArray(raw?.seenChapters) ? raw.seenChapters.filter((id) => typeof id === "string") : [],
@@ -6620,11 +6622,13 @@ async function shareRun() {
         const file = new File([blob], "ottisk-share.png", { type: blob.type || "image/png" });
         if (!navigator.canShare || navigator.canShare({ files: [file] })) {
           await navigator.share({ title: "ОТТИСК", text, files: [file] });
+          markPhoneQa("share", true);
           showToast("след отправлен");
           return;
         }
       }
       await navigator.share({ title: "ОТТИСК", text });
+      markPhoneQa("share", true);
       showToast("след отправлен");
       return;
     }
@@ -6638,6 +6642,7 @@ async function shareRun() {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
+      markPhoneQa("share", true);
       showToast("текст скопирован");
       return;
     }
@@ -9600,6 +9605,151 @@ function renderLocalLeaderboard() {
   });
 }
 
+const PHONE_QA_KEY = "ottisk-phone-qa-v1";
+const PHONE_QA_ITEMS = [
+  { id: "open", label: "Открыл игру на телефоне" },
+  { id: "install", label: "Добавил на домашний экран" },
+  { id: "run", label: "Сыграл 2+ забега" },
+  { id: "share", label: "Поделился результатом" },
+  { id: "backup", label: "Сохранил код/файл прогресса" },
+  { id: "onehand", label: "Проверил режим «одна рука»" },
+];
+
+function gamePublicUrl() {
+  try {
+    return new URL("./", location.href).href.replace(/\/?$/, "/");
+  } catch (_) {
+    return SHARE_URL;
+  }
+}
+
+function loadPhoneQa() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PHONE_QA_KEY) || "{}");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function savePhoneQa(map) {
+  localStorage.setItem(PHONE_QA_KEY, JSON.stringify(map || {}));
+}
+
+function markPhoneQa(id, on = true) {
+  const map = loadPhoneQa();
+  if (on) map[id] = true;
+  else delete map[id];
+  savePhoneQa(map);
+  renderPhoneReady();
+}
+
+function renderPhoneReady() {
+  const list = document.getElementById("phone-qa-list");
+  const status = document.getElementById("phone-ready-status");
+  const map = loadPhoneQa();
+  if ((state.meta?.runs || 0) >= 2) map.run = true;
+  if (window.OttiskPwa?.isStandalone?.()) map.install = true;
+  map.open = true;
+  savePhoneQa(map);
+  const done = PHONE_QA_ITEMS.filter((item) => map[item.id]).length;
+  if (status) {
+    status.textContent = done >= PHONE_QA_ITEMS.length
+      ? "телефон готов · дальше Play Console на ПК"
+      : `проверено ${done}/${PHONE_QA_ITEMS.length} · ПК позже: AAB и Console`;
+  }
+  if (!list) return;
+  list.textContent = "";
+  for (const item of PHONE_QA_ITEMS) {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `phone-qa-item${map[item.id] ? " on" : ""}`;
+    btn.setAttribute("aria-pressed", map[item.id] ? "true" : "false");
+    btn.textContent = `${map[item.id] ? "✓" : "○"} ${item.label}`;
+    btn.addEventListener("click", () => {
+      markPhoneQa(item.id, !loadPhoneQa()[item.id]);
+      if (typeof sfxUiTap === "function") sfxUiTap(0);
+    });
+    li.appendChild(btn);
+    list.appendChild(li);
+  }
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (_) {
+    ok = false;
+  }
+  area.remove();
+  return ok;
+}
+
+async function copyGameLink() {
+  const url = gamePublicUrl();
+  const ok = await copyTextToClipboard(url).catch(() => false);
+  showToast(ok ? "ссылка скопирована" : url);
+  return ok;
+}
+
+async function shareInvite() {
+  const url = gamePublicUrl();
+  const text = `ОТТИСК — существо живёт только под пальцем. Сыграй: ${url}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "ОТТИСК", text, url });
+      markPhoneQa("share", true);
+      return true;
+    }
+  } catch (error) {
+    if (String(error?.name || "").includes("Abort")) return false;
+  }
+  const ok = await copyTextToClipboard(text).catch(() => false);
+  showToast(ok ? "приглашение скопировано" : "не удалось поделиться");
+  if (ok) markPhoneQa("share", true);
+  return ok;
+}
+
+function triggerPhoneInstall() {
+  const installBtn = document.getElementById("btn-install-pwa");
+  if (installBtn && !installBtn.classList.contains("hidden")) {
+    installBtn.click();
+    return;
+  }
+  window.OttiskPwa?.refresh?.();
+  if (window.OttiskPwa?.isIos?.()) {
+    showToast("Safari · Поделиться → На экран «Домой»");
+  } else {
+    showToast("Меню браузера → Установить / На экран");
+  }
+}
+
+function maybeSuggestOneHand() {
+  if (!state.meta || state.meta.oneHandHinted) return;
+  const shortSide = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  const touch = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+  if (!touch || shortSide <= 0 || shortSide > 430) return;
+  state.meta.oneHandHinted = true;
+  saveMeta();
+  setTimeout(() => {
+    if ((state.meta?.oneHand || "off") !== "off") return;
+    showToast("удобнее одной рукой? · Ещё → одна рука");
+  }, 1800);
+}
+
 function renderCloudStatus(text = "") {
   const status = document.getElementById("cloud-status");
   const account = document.getElementById("btn-cloud-account");
@@ -9749,7 +9899,21 @@ function boot() {
   }
   const apiInput = document.getElementById("cloud-api-input");
   if (apiInput) apiInput.value = cloudConfig().apiUrl || storedApi || declaredApi || "";
-  window.OttiskPwa?.setup?.(document.querySelector(".menu-foot") || document.getElementById("app"));
+  window.OttiskPwa?.setup?.(
+    document.querySelector(".phone-tools .data-tools-row")
+    || document.querySelector(".menu-foot")
+    || document.getElementById("app")
+  );
+  document.addEventListener("ottisk-toast", (event) => {
+    if (event.detail?.text) showToast(event.detail.text);
+  });
+  document.getElementById("btn-copy-game-link")?.addEventListener("click", () => {
+    copyGameLink().catch(() => showToast(gamePublicUrl()));
+  });
+  document.getElementById("btn-share-invite")?.addEventListener("click", () => {
+    shareInvite().catch(() => showToast("не удалось пригласить"));
+  });
+  document.getElementById("btn-phone-install")?.addEventListener("click", () => triggerPhoneInstall());
   applyAccessibilityPrefs();
   refreshCssCache();
   ensureSeasonalUnlock();
@@ -10056,6 +10220,7 @@ function boot() {
     saveMeta();
     applyAccessibilityPrefs();
     renderSettings();
+    if ((state.meta.oneHand || "off") !== "off") markPhoneQa("onehand", true);
   });
   document.getElementById("btn-colorblind")?.addEventListener("click", () => {
     const values = ["off", "protanopia", "deuteranopia", "tritanopia"];
@@ -10082,12 +10247,14 @@ function boot() {
     if (!state.meta || !window.OttiskBackup) return;
     window.OttiskBackup.download(state.meta);
     window.OttiskAnalytics?.track("backup_export");
+    markPhoneQa("backup", true);
     showToast("резервная копия сохранена");
   });
   document.getElementById("btn-backup-code")?.addEventListener("click", () => {
     if (!state.meta || !window.OttiskBackup) return;
     const code = window.OttiskBackup.create(state.meta).code;
     const entered = window.prompt("Скопируй код. Для импорта вставь другой код и нажми OK.", code);
+    markPhoneQa("backup", true);
     if (entered && entered !== code && window.confirm("Заменить текущий прогресс?")) {
       try {
         installBackup(window.OttiskBackup.parse(entered));
@@ -10354,6 +10521,7 @@ function boot() {
   // First death returns to tips + starter gift; the live tutorial teaches the hook.
   if (window.OttiskAccount?.isReady?.()) {
     showHomeMenu();
+    maybeSuggestOneHand();
     if (!maybeShowOnboardTips() && state.meta?.streak > 1) {
       setTimeout(() => showToast(`серия · ${state.meta.streak} дн`), 650);
     }
@@ -10364,7 +10532,7 @@ function boot() {
   const nativeShell = !!window.OttiskNative?.isNative;
   if ("serviceWorker" in navigator && !nativeShell) {
     navigator.serviceWorker
-      .register("./sw.js?v=89")
+      .register("./sw.js?v=90")
       .then((reg) => reg.update())
       .catch(() => {});
   }

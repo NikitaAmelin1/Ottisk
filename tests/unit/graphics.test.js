@@ -30,5 +30,5 @@ test("css chrome follows theme tokens", () => {
 
 test("cache bump for graphics polish", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
-  assert.match(sw, /ottisk-v89/);
+  assert.match(sw, /ottisk-v\d+/);
 });

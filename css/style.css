@@ -2140,6 +2140,34 @@ body {
 
 .install-tip-btn.hidden { display: none; }
 
+.phone-qa-list {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 4px;
+  padding: 0;
+  width: 100%;
+}
+
+.phone-qa-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(243, 238, 232, 0.14);
+  border-radius: 12px;
+  background: rgba(4, 16, 28, 0.4);
+  color: var(--foam);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.phone-qa-item.on {
+  border-color: color-mix(in srgb, var(--life) 45%, transparent);
+  color: var(--life);
+}
+
 .cloud-api-label {
   display: flex;
   flex-direction: column;

@@ -3,6 +3,19 @@
 Пакет: `com.amelin.ottisk` · Версия: см. `package.json` / `android/app/build.gradle`  
 Код-агент и магазинные материалы: этот репозиторий.
 
+## 0. С телефона сейчас (без ПК)
+
+См. короткий гид: [PHONE_NOW.md](./PHONE_NOW.md)
+
+- [ ] Открыть https://nikitaamelin1.github.io/Ottisk/ на телефоне
+- [ ] Установить на домашний экран (Ещё → С телефона)
+- [ ] Пройти onboarding + 2 забега, поделиться результатом
+- [ ] Сохранить код переноса прогресса
+- [ ] Отметить чеклист в игре (Ещё → С телефона)
+- [ ] (Опционально) Merge открытых PR в GitHub Mobile
+
+Разделы 1–8 ниже — в основном **ПК / Console**.
+
 ## 1. Карточка магазина
 - [ ] RU listing из `store/metadata.android.txt`
 - [ ] EN listing из `store/metadata.en.txt`

@@ -221,6 +221,18 @@
             <p id="story-biome" class="menu-note quiet"></p>
           </section>
 
+          <section class="data-tools phone-tools" aria-label="С телефона">
+            <p class="menu-section-label">С телефона</p>
+            <p id="phone-ready-status" class="menu-note quiet">установи на экран · проверь забег · сохрани прогресс</p>
+            <div class="data-tools-row">
+              <button id="btn-copy-game-link" class="menu-link" type="button">Скопировать ссылку</button>
+              <button id="btn-share-invite" class="menu-link" type="button">Пригласить друга</button>
+              <button id="btn-phone-install" class="menu-link" type="button">На домашний экран</button>
+            </div>
+            <ul id="phone-qa-list" class="phone-qa-list" aria-label="Проверка с телефона"></ul>
+            <p class="menu-note quiet">ПК позже: Play Console, AAB, Cloudflare Worker.</p>
+          </section>
+
           <section class="data-tools account-tools" aria-label="Аккаунт">
             <p class="menu-section-label" data-i18n="account">Аккаунт</p>
             <p id="account-status" class="menu-note quiet">гость · прогресс только на устройстве</p>
@@ -516,7 +528,7 @@
   </div>
   <script>
     (async () => {
-      const stamp = "ottisk-force-v89";
+      const stamp = "ottisk-force-v90";
       if (localStorage.getItem(stamp)) return;
       localStorage.setItem(stamp, "1");
       try {
@@ -530,7 +542,7 @@
         }
       } catch (_) {}
       const url = new URL(location.href);
-      url.searchParams.set("v", "87");
+      url.searchParams.set("v", "90");
       location.replace(url.toString());
     })();
   </script>
