@@ -6750,33 +6750,33 @@ async function shareRun() {
 
 function sparkProfile(type) {
   if (type === "super") {
-    return { type, worth: 10, restore: 48, color: "#ff2f45", r: rand(14, 17), super: true, form: "pulsar" };
+    return { type, worth: 10, restore: 48, color: "#ff2458", r: rand(14, 17), super: true, form: "pulsar" };
   }
   if (type === "rare") {
-    return { type, worth: 3, restore: 35, color: "#ffcc44", r: rand(14, 18), form: "prism" };
+    return { type, worth: 3, restore: 35, color: "#ffe14a", r: rand(14, 18), form: "prism" };
   }
   if (type === "cool") {
-    return { type, worth: 1, restore: 25, color: "#58c8ff", r: rand(12.5, 16), form: "frost" };
+    return { type, worth: 1, restore: 25, color: "#4ad8ff", r: rand(12.5, 16), form: "frost" };
   }
   if (type === "bait") {
-    return { type, worth: 1, restore: 12, color: "#ff58d0", r: rand(12.5, 16), form: "lure" };
+    return { type, worth: 1, restore: 12, color: "#ff4ae0", r: rand(12.5, 16), form: "lure" };
   }
   if (type === "comet") {
-    return { type, worth: 5, restore: 28, color: "#ffd840", r: rand(15, 19), comet: true, form: "bolt" };
+    return { type, worth: 5, restore: 28, color: "#ffef3a", r: rand(15, 19), comet: true, form: "bolt" };
   }
   if (type === "deep") {
-    return { type, worth: 4, restore: 32, color: "#70d8ff", r: rand(13.5, 17), form: "abyss" };
+    return { type, worth: 4, restore: 32, color: "#5ce8ff", r: rand(13.5, 17), form: "abyss" };
   }
   if (type === "seed") {
-    return { type, worth: 2, restore: 16, color: "#58ffb0", r: rand(13, 16.5), seed: true, form: "seed" };
+    return { type, worth: 2, restore: 16, color: "#3dff9a", r: rand(13, 16.5), seed: true, form: "seed" };
   }
   if (type === "ember") {
-    return { type, worth: 3, restore: 30, color: "#ff9a62", r: rand(13, 16), form: "ember" };
+    return { type, worth: 3, restore: 30, color: "#ff8a3a", r: rand(13, 16), form: "ember" };
   }
   if (type === "mirror") {
-    return { type, worth: 2, restore: 20, color: "#9be7ff", r: rand(12, 15), form: "mirror", mirror: true };
+    return { type, worth: 2, restore: 20, color: "#8cf4ff", r: rand(12, 15), form: "mirror", mirror: true };
   }
-  const normals = ["#ffd080", "#ffb868", "#7affd4", "#9ad0ff", cssVar("--accent-b", "#62f0c8")];
+  const normals = ["#ffd45a", "#ff9a4a", "#3dffc8", "#5ad0ff", "#ff6ad8", cssVar("--accent-b", "#3dffc8"), cssVar("--gold", "#f4ff6e")];
   return {
     type: "normal",
     worth: 1,
@@ -8315,72 +8315,113 @@ function drawOceanBackground() {
   const w = state.width;
   const h = state.height;
   const ink = inInkDive();
-  const bg0 = cssVar("--bg0", "#062840");
-  const bg1 = cssVar("--bg1", "#1a7aa8");
-  const bg2 = cssVar("--bg2", "#0e5078");
-  const key = `${w}x${h}|${ink ? 1 : 0}|${bg0}|${bg1}|${bg2}`;
+  const bg0 = cssVar("--bg0", "#063a48");
+  const bg1 = cssVar("--bg1", "#14a8c0");
+  const bg2 = cssVar("--bg2", "#1ec4a8");
+  const life = cssVar("--life", "#3dffc8");
+  const gold = cssVar("--gold", "#f4ff6e");
+  const ember = cssVar("--ember", "#ff7a45");
+  const key = `${w}x${h}|${ink ? 1 : 0}|${bg0}|${bg1}|${bg2}|vivid`;
   if (bgCache.key !== key || !bgCache.canvas) {
     const layer = document.createElement("canvas");
     layer.width = Math.max(1, Math.floor(w));
     layer.height = Math.max(1, Math.floor(h));
     const g = layer.getContext("2d");
-    const deep = mixColor(bg0, "#02060e", ink ? 0.35 : 0.55);
-    const mid = mixColor(bg0, bg2, ink ? 0.55 : 0.42);
-    const lift = mixColor(bg1, bg2, ink ? 0.35 : 0.22);
-    const sky = mixColor(lift, "#ffffff", ink ? 0.04 : 0.08);
+    const deep = mixColor(bg0, bg2, ink ? 0.22 : 0.38);
+    const mid = mixColor(bg1, bg2, ink ? 0.45 : 0.62);
+    const lift = mixColor(bg1, life, ink ? 0.18 : 0.32);
+    const sky = mixColor(lift, "#ffffff", ink ? 0.12 : 0.22);
     const grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, sky);
-    grad.addColorStop(0.28, mid);
-    grad.addColorStop(0.68, mixColor(bg0, deep, 0.35));
-    grad.addColorStop(1, deep);
+    grad.addColorStop(0.22, mid);
+    grad.addColorStop(0.55, mixColor(bg1, deep, 0.28));
+    grad.addColorStop(0.82, deep);
+    grad.addColorStop(1, mixColor(deep, bg0, 0.35));
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
 
-    // Depth bands — cheap atmospheric layers
-    for (let i = 0; i < 4; i += 1) {
-      const y = h * (0.18 + i * 0.18);
-      const band = g.createLinearGradient(0, y - h * 0.08, 0, y + h * 0.1);
-      const tint = mixColor(i % 2 ? bg1 : bg2, deep, 0.55 + i * 0.08);
+    // Colorful depth bands
+    const bandTints = [life, bg2, gold, ember];
+    for (let i = 0; i < 5; i += 1) {
+      const y = h * (0.14 + i * 0.16);
+      const band = g.createLinearGradient(0, y - h * 0.09, 0, y + h * 0.11);
+      const tint = mixColor(bandTints[i % bandTints.length], mid, 0.42 + i * 0.04);
       band.addColorStop(0, "transparent");
       band.addColorStop(0.5, tint);
       band.addColorStop(1, "transparent");
-      g.globalAlpha = ink ? 0.1 : 0.14;
+      g.globalAlpha = ink ? 0.16 : 0.26;
       g.fillStyle = band;
-      g.fillRect(0, y - h * 0.08, w, h * 0.18);
+      g.fillRect(0, y - h * 0.09, w, h * 0.2);
     }
     g.globalAlpha = 1;
 
-    // Static mote field (deterministic-ish from size)
-    const moteCount = effectsEnabled() ? 28 : 12;
+    // Side color blooms
+    const leftBloom = g.createRadialGradient(0, h * 0.55, 4, 0, h * 0.55, Math.max(w, h) * 0.42);
+    leftBloom.addColorStop(0, mixColor(life, "#ffffff", 0.25));
+    leftBloom.addColorStop(0.55, mixColor(bg2, life, 0.2));
+    leftBloom.addColorStop(1, "transparent");
+    g.globalAlpha = ink ? 0.22 : 0.38;
+    g.fillStyle = leftBloom;
+    g.fillRect(0, 0, w, h);
+
+    const rightBloom = g.createRadialGradient(w, h * 0.35, 4, w, h * 0.35, Math.max(w, h) * 0.4);
+    rightBloom.addColorStop(0, mixColor(ember, gold, 0.35));
+    rightBloom.addColorStop(0.5, mixColor(gold, bg1, 0.18));
+    rightBloom.addColorStop(1, "transparent");
+    g.globalAlpha = ink ? 0.16 : 0.3;
+    g.fillStyle = rightBloom;
+    g.fillRect(0, 0, w, h);
+    g.globalAlpha = 1;
+
+    // Brighter mote field
+    const moteCount = effectsEnabled() ? 42 : 18;
     for (let i = 0; i < moteCount; i += 1) {
       const px = ((i * 97) % 1000) / 1000 * w;
       const py = ((i * 53 + 120) % 1000) / 1000 * h;
-      const size = 0.8 + (i % 4) * 0.55;
-      g.globalAlpha = ink ? 0.05 + (i % 3) * 0.02 : 0.07 + (i % 3) * 0.03;
-      g.fillStyle = i % 5 === 0 ? mixColor(bg1, "#ffffff", 0.55) : mixColor(bg2, "#ffffff", 0.35);
+      const size = 1.1 + (i % 4) * 0.7;
+      g.globalAlpha = ink ? 0.1 + (i % 3) * 0.04 : 0.16 + (i % 3) * 0.05;
+      const moteColor = i % 4 === 0
+        ? mixColor(gold, "#ffffff", 0.45)
+        : i % 4 === 1
+          ? mixColor(life, "#ffffff", 0.4)
+          : i % 4 === 2
+            ? mixColor(ember, "#ffffff", 0.35)
+            : mixColor(bg1, "#ffffff", 0.55);
+      g.fillStyle = moteColor;
       g.beginPath();
       g.arc(px, py, size, 0, Math.PI * 2);
       g.fill();
     }
     g.globalAlpha = 1;
 
-    // Soft caustic wash near the top third
-    const caustic = g.createRadialGradient(w * 0.35, h * 0.12, 8, w * 0.45, h * 0.2, Math.max(w, h) * 0.55);
-    caustic.addColorStop(0, mixColor(bg1, "#ffffff", 0.18));
-    caustic.addColorStop(0.45, mixColor(bg2, bg1, 0.12));
+    // Strong caustic wash near the top
+    const caustic = g.createRadialGradient(w * 0.38, h * 0.1, 6, w * 0.48, h * 0.22, Math.max(w, h) * 0.6);
+    caustic.addColorStop(0, mixColor(life, "#ffffff", 0.45));
+    caustic.addColorStop(0.35, mixColor(gold, bg1, 0.28));
+    caustic.addColorStop(0.7, mixColor(bg2, life, 0.18));
     caustic.addColorStop(1, "transparent");
-    g.globalAlpha = ink ? 0.18 : 0.28;
+    g.globalAlpha = ink ? 0.28 : 0.48;
     g.fillStyle = caustic;
     g.fillRect(0, 0, w, h);
     g.globalAlpha = 1;
 
+    // Second caustic patch
+    const caustic2 = g.createRadialGradient(w * 0.72, h * 0.28, 4, w * 0.7, h * 0.34, Math.max(w, h) * 0.35);
+    caustic2.addColorStop(0, mixColor(ember, gold, 0.35));
+    caustic2.addColorStop(0.55, mixColor(bg1, ember, 0.12));
+    caustic2.addColorStop(1, "transparent");
+    g.globalAlpha = ink ? 0.14 : 0.26;
+    g.fillStyle = caustic2;
+    g.fillRect(0, 0, w, h);
+    g.globalAlpha = 1;
+
     const vignette = g.createRadialGradient(
-      w * 0.5, h * 0.48, Math.min(w, h) * 0.22,
-      w * 0.5, h * 0.52, Math.max(w, h) * 0.78
+      w * 0.5, h * 0.48, Math.min(w, h) * 0.28,
+      w * 0.5, h * 0.52, Math.max(w, h) * 0.82
     );
     vignette.addColorStop(0, "transparent");
-    vignette.addColorStop(0.65, "transparent");
-    vignette.addColorStop(1, mixColor(deep, "#000000", 0.55));
+    vignette.addColorStop(0.72, "transparent");
+    vignette.addColorStop(1, mixColor(deep, "#000000", 0.28));
 
     bgCache.w = w;
     bgCache.h = h;
@@ -8391,13 +8432,14 @@ function drawOceanBackground() {
 
   ctx.drawImage(bgCache.canvas, 0, 0, w, h);
 
-  // Living center haze (cheap, respects reduceMotion via lower amplitude)
-  const hush = state.meta?.reduceMotion ? 0 : Math.sin(state.time * 1.15) * 0.02;
+  // Living center haze
+  const hush = state.meta?.reduceMotion ? 0 : Math.sin(state.time * 1.15) * 0.03;
   ctx.save();
-  ctx.globalAlpha = (ink ? 0.08 : 0.12) + hush;
-  const haze = ctx.createRadialGradient(w * 0.5, h * 0.42, Math.min(w, h) * 0.08, w * 0.5, h * 0.45, Math.max(w, h) * 0.48);
-  haze.addColorStop(0, mixColor(bg1, "#ffffff", 0.22));
-  haze.addColorStop(0.55, mixColor(bg2, bg0, 0.15));
+  ctx.globalAlpha = (ink ? 0.12 : 0.2) + hush;
+  const haze = ctx.createRadialGradient(w * 0.5, h * 0.42, Math.min(w, h) * 0.06, w * 0.5, h * 0.45, Math.max(w, h) * 0.5);
+  haze.addColorStop(0, mixColor(life, "#ffffff", 0.35));
+  haze.addColorStop(0.4, mixColor(gold, bg1, 0.22));
+  haze.addColorStop(0.7, mixColor(bg2, ember, 0.12));
   haze.addColorStop(1, "transparent");
   ctx.fillStyle = haze;
   ctx.fillRect(0, 0, w, h);
@@ -8406,14 +8448,15 @@ function drawOceanBackground() {
   // Slow drifting highlight motes
   if (effectsEnabled() && !state.meta?.reduceMotion) {
     ctx.save();
-    for (let i = 0; i < 7; i += 1) {
-      const drift = state.time * (0.08 + i * 0.01);
-      const px = ((i * 137.5 + drift * 40) % (w + 40)) - 20;
-      const py = ((i * 89.3 + Math.sin(drift + i) * 18) % (h * 0.85)) + h * 0.08;
-      ctx.globalAlpha = 0.05 + (i % 3) * 0.025;
-      ctx.fillStyle = mixColor(cssVar("--foam", "#fffdf8"), bg1, 0.35);
+    const moteColors = [life, gold, ember, cssVar("--foam", "#f5fffb")];
+    for (let i = 0; i < 10; i += 1) {
+      const drift = state.time * (0.1 + i * 0.012);
+      const px = ((i * 137.5 + drift * 48) % (w + 40)) - 20;
+      const py = ((i * 89.3 + Math.sin(drift + i) * 22) % (h * 0.85)) + h * 0.06;
+      ctx.globalAlpha = 0.12 + (i % 3) * 0.05;
+      ctx.fillStyle = mixColor(moteColors[i % moteColors.length], "#ffffff", 0.35);
       ctx.beginPath();
-      ctx.arc(px, py, 1.1 + (i % 3) * 0.5, 0, Math.PI * 2);
+      ctx.arc(px, py, 1.4 + (i % 3) * 0.7, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -8426,14 +8469,14 @@ function drawOceanBackground() {
 function drawBackground() {
   drawOceanBackground();
   if (state.bloomPulse > 0) {
-    ctx.fillStyle = cssVar("--gold", "#ffe08a");
-    ctx.globalAlpha = state.bloomPulse * 0.08;
+    ctx.fillStyle = cssVar("--gold", "#f4ff6e");
+    ctx.globalAlpha = state.bloomPulse * 0.14;
     ctx.fillRect(0, 0, state.width, state.height);
     ctx.globalAlpha = 1;
   }
   if (state.fever) {
-    ctx.fillStyle = cssVar("--ember", "#ff8a52");
-    ctx.globalAlpha = 0.08 + Math.sin(state.time * 7) * 0.03;
+    ctx.fillStyle = cssVar("--ember", "#ff7a45");
+    ctx.globalAlpha = 0.12 + Math.sin(state.time * 7) * 0.04;
     ctx.fillRect(0, 0, state.width, state.height);
     ctx.globalAlpha = 1;
   }

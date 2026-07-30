@@ -1,21 +1,21 @@
 :root {
-  /* Deep lagoon imprint — cool abyss + sea-glass light, warm coral spark */
-  --bg0: #031820;
-  --bg1: #0a5f6e;
-  --bg2: #126f72;
-  --foam: #f2fff9;
-  --sand: #b7d8ce;
-  --ember: #ff8558;
-  --gold: #e7ff8a;
-  --life: #2dffc2;
-  --danger: #ff5d78;
-  --mute: #6f9198;
-  --panel: #072832;
-  --line: rgba(242, 255, 249, 0.2);
-  --glow: rgba(45, 255, 194, 0.28);
-  --accent-a: #ff8558;
-  --accent-b: #2dffc2;
-  --ink: #021018;
+  /* Vivid lagoon — brighter abyss water + neon food accents */
+  --bg0: #063a48;
+  --bg1: #14a8c0;
+  --bg2: #1ec4a8;
+  --foam: #f5fffb;
+  --sand: #c8efe4;
+  --ember: #ff7a45;
+  --gold: #f4ff6e;
+  --life: #3dffc8;
+  --danger: #ff4f72;
+  --mute: #7aaab4;
+  --panel: #0a3a48;
+  --line: rgba(245, 255, 251, 0.22);
+  --glow: rgba(61, 255, 200, 0.38);
+  --accent-a: #ff7a45;
+  --accent-b: #3dffc8;
+  --ink: #021820;
   --menu-surface: color-mix(in srgb, var(--panel) 72%, transparent);
   --menu-ink: var(--foam);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -70,52 +70,52 @@ body {
 }
 
 #app[data-theme="0"] {
-  --bg0: #031820; --bg1: #0a5f6e; --bg2: #126f72;
-  --ember: #ff8558; --gold: #e7ff8a; --life: #2dffc2; --danger: #ff5d78;
-  --panel: #072832; --accent-a: #ff8558; --accent-b: #2dffc2;
-  --foam: #f2fff9; --sand: #b7d8ce; --mute: #6f9198;
+  --bg0: #063a48; --bg1: #14a8c0; --bg2: #1ec4a8;
+  --ember: #ff7a45; --gold: #f4ff6e; --life: #3dffc8; --danger: #ff4f72;
+  --panel: #0a3a48; --accent-a: #ff7a45; --accent-b: #3dffc8;
+  --foam: #f5fffb; --sand: #c8efe4; --mute: #7aaab4;
 }
 #app[data-theme="1"] {
-  --bg0: #041a28; --bg1: #0d6a88; --bg2: #148090;
-  --ember: #56e7ff; --gold: #c8fff4; --life: #4dffd4; --danger: #ff7ab8;
-  --panel: #0a3040; --accent-a: #56e7ff; --accent-b: #4dffd4;
-  --foam: #f0fffc; --sand: #a8d8e0; --mute: #6a98a4;
+  --bg0: #074058; --bg1: #1ab8e0; --bg2: #28d0c8;
+  --ember: #4ef0ff; --gold: #d8fff4; --life: #5affdc; --danger: #ff7ac8;
+  --panel: #0c4860; --accent-a: #4ef0ff; --accent-b: #5affdc;
+  --foam: #f2fffc; --sand: #b8eef4; --mute: #78b0bc;
 }
 #app[data-theme="2"] {
-  --bg0: #1a120c; --bg1: #6a3a18; --bg2: #7a4020;
-  --ember: #ff9a4a; --gold: #ffe08a; --life: #ffd27a; --danger: #ff6a4a;
-  --panel: #2a1a10; --accent-a: #ff9a4a; --accent-b: #ffe08a;
-  --foam: #fff8ee; --sand: #e0c8a8; --mute: #a08870;
+  --bg0: #2a180c; --bg1: #c06028; --bg2: #e07830;
+  --ember: #ff9a40; --gold: #ffe06a; --life: #ffd878; --danger: #ff6840;
+  --panel: #3a2010; --accent-a: #ff9a40; --accent-b: #ffe06a;
+  --foam: #fff8ee; --sand: #f0d0a8; --mute: #b88860;
 }
 #app[data-theme="3"] {
-  --bg0: #0a1c16; --bg1: #1a6a4e; --bg2: #2a6a3a;
-  --ember: #4dffb0; --gold: #d8ff7a; --life: #6affc8; --danger: #ff9a62;
-  --panel: #0e2e24; --accent-a: #4dffb0; --accent-b: #d8ff7a;
-  --foam: #f2fff8; --sand: #b0d8c0; --mute: #6a9880;
+  --bg0: #0c2c20; --bg1: #28a878; --bg2: #3cbc48;
+  --ember: #4dffb0; --gold: #e0ff6a; --life: #6affc8; --danger: #ff9a58;
+  --panel: #124030; --accent-a: #4dffb0; --accent-b: #e0ff6a;
+  --foam: #f2fff8; --sand: #c0f0d0; --mute: #78b090;
 }
 #app[data-theme="4"] {
-  --bg0: #120c1c; --bg1: #3a2860; --bg2: #4a2850;
-  --ember: #ff7ad0; --gold: #ffe0f0; --life: #a8d8ff; --danger: #ff6a90;
-  --panel: #1c1430; --accent-a: #ff7ad0; --accent-b: #a8d8ff;
-  --foam: #f8f4ff; --sand: #d0c0e0; --mute: #8a7aa0;
+  --bg0: #1c1030; --bg1: #6848a8; --bg2: #8850a0;
+  --ember: #ff7ad8; --gold: #ffe8f8; --life: #b0e0ff; --danger: #ff6a98;
+  --panel: #281848; --accent-a: #ff7ad8; --accent-b: #b0e0ff;
+  --foam: #faf6ff; --sand: #e0d0f0; --mute: #9888b0;
 }
 #app[data-theme="5"] {
-  --bg0: #18140c; --bg1: #4a3a20; --bg2: #5a4a18;
-  --ember: #ffe04a; --gold: #fff4a8; --life: #e8ff7a; --danger: #ff9a4a;
-  --panel: #282018; --accent-a: #ffe04a; --accent-b: #ff9a4a;
-  --foam: #fffdf0; --sand: #e0d4a8; --mute: #988870;
+  --bg0: #28200c; --bg1: #907028; --bg2: #b09020;
+  --ember: #ffe040; --gold: #fff4a0; --life: #f0ff6a; --danger: #ff9a40;
+  --panel: #383018; --accent-a: #ffe040; --accent-b: #ff9a40;
+  --foam: #fffdf0; --sand: #f0e4b0; --mute: #a89870;
 }
 #app[data-theme="6"] {
-  --bg0: #031820; --bg1: #0b5868; --bg2: #148088;
-  --ember: #4ae8f8; --gold: #d4fffa; --life: #3dffc8; --danger: #ff6a88;
-  --panel: #072e38; --accent-a: #3dffc8; --accent-b: #4ae8f8;
-  --foam: #f0fffc; --sand: #a8dce0; --mute: #6a9aa4;
+  --bg0: #063a48; --bg1: #18a0b8; --bg2: #28c8d0;
+  --ember: #40f0ff; --gold: #d8fffa; --life: #40ffd0; --danger: #ff5a88;
+  --panel: #0a4050; --accent-a: #40ffd0; --accent-b: #40f0ff;
+  --foam: #f0fffc; --sand: #b8f0f4; --mute: #78b4bc;
 }
 #app[data-theme="7"] {
-  --bg0: #100818; --bg1: #3a1848; --bg2: #582040;
-  --ember: #ff6ab0; --gold: #ffe0a0; --life: #b8a0ff; --danger: #ff5a70;
-  --panel: #221030; --accent-a: #ff6ab0; --accent-b: #b8a0ff;
-  --foam: #faf4ff; --sand: #d8c0e0; --mute: #8a7098;
+  --bg0: #1c0c28; --bg1: #682878; --bg2: #983060;
+  --ember: #ff60c0; --gold: #ffe8a0; --life: #c8a8ff; --danger: #ff5070;
+  --panel: #301840; --accent-a: #ff60c0; --accent-b: #c8a8ff;
+  --foam: #faf4ff; --sand: #e8d0f0; --mute: #9880a8;
 }
 
 .stage {
@@ -125,7 +125,7 @@ body {
   min-height: 0;
   width: 100%;
   overflow: hidden;
-  background: color-mix(in srgb, var(--bg0) 88%, #040c1c);
+  background: color-mix(in srgb, var(--bg0) 70%, var(--bg1));
 }
 
 .aura {
@@ -133,10 +133,11 @@ body {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(70% 45% at 50% 0%, color-mix(in srgb, var(--foam) 14%, transparent), transparent 55%),
-    radial-gradient(55% 40% at 18% 70%, color-mix(in srgb, var(--accent-b) 12%, transparent), transparent 70%),
-    radial-gradient(50% 35% at 88% 40%, color-mix(in srgb, var(--accent-a) 10%, transparent), transparent 68%),
-    linear-gradient(180deg, transparent 52%, color-mix(in srgb, var(--bg0) 35%, transparent) 100%);
+    radial-gradient(75% 48% at 50% 0%, color-mix(in srgb, var(--foam) 22%, transparent), transparent 55%),
+    radial-gradient(58% 42% at 16% 72%, color-mix(in srgb, var(--accent-b) 28%, transparent), transparent 70%),
+    radial-gradient(52% 38% at 90% 38%, color-mix(in srgb, var(--accent-a) 22%, transparent), transparent 68%),
+    radial-gradient(40% 30% at 70% 20%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 65%),
+    linear-gradient(180deg, transparent 48%, color-mix(in srgb, var(--bg0) 28%, transparent) 100%);
   z-index: 0;
 }
 
